@@ -2,7 +2,7 @@
 
 do wykonania
 
-1. wprowadzanie danych : kod smiles w polu tekstowym lub plik z danymi do obliczeń, usunięcie pozostałych pół formularza
+1. (dorota) wprowadzanie danych : kod smiles w polu tekstowym lub plik z danymi do obliczeń, usunięcie pozostałych pół formularza
 2. (Martyna) JSME Molecule Editor dla generowania kodu smiles, przykład
    https://etoh.chem.ug.edu.pl/~czarek/projekt/smiles.html
    pobrać https://jsme-editor.github.io/downloads/JSME_2024-04-29.zip i rozpakować w static
