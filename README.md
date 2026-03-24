@@ -1,5 +1,6 @@
 # programming_project_WCh_2026
 
+tworzymy gałąź "czarek"
 <pre>
 echo "# programming_project_WCh_2026" >> README.md
 git init
