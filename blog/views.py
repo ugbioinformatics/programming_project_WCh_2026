@@ -14,7 +14,7 @@ from math import prod
 def runProcess(command, cwd=None, timeout=120):
   """
   Uruchamia proces systemowy i zwraca:
-    (czy_sukces, stdout, stderr)
+    (czy_sukces, output, err)
   Przykład:
         from blog.views import runProcess
 
@@ -34,10 +34,6 @@ def runProcess(command, cwd=None, timeout=120):
   
   except subprocess.TimeoutExpired:
     print(f"timeout expired: {timeout}")
-  
-
-
-
 
 
 
