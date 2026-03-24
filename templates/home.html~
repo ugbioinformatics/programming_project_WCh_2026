@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+<p>
+<form action="post/suma/" method="POST" >
+                 {% csrf_token %}
+                 {{ form }}
+<button type="submit" class="save btn btn-default">Save & submit</button>
+</form>
+
+</div>
+{% for post in post_list %}
+<div class="post-entry">
+    <h2><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
+</div>
+{% endfor %}
+{% endblock content %}
