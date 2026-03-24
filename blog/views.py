@@ -2,7 +2,7 @@ from django.shortcuts import render
 import subprocess
 
 # Create your views here.
-from django.views.generic import ListView, DetailView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, DeleteView
 from .models import Post
 from django.views.generic.edit import CreateView # new
 from django.shortcuts import redirect, render, get_object_or_404
@@ -52,10 +52,7 @@ class BlogCreateView(CreateView): # new
   template_name = "post_new.html"
   fields = ["title", "author", "body"]
   
-class BlogUpdateView(UpdateView): # new
-    model = Post
-    template_name = "post_edit.html"
-    fields = ["title"]
+
 
 class BlogDeleteView(DeleteView):
     model = Post
