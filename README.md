@@ -9,7 +9,7 @@ do wykonania
    sprzwdzić jak to jest w programming_project_WCh_2025
 4. (Tymek) konwersja smiles do struktury 3d cząsteczki - openbabel lub pubchempy, albo w skrypcie
    <pre>
-     obabel -:'CC(=O)CC' --gen3d -oxyz -Ostart.xyz
+     /usr/bin/obabel -:'CC(=O)CC' --gen3d -oxyz -Ostart.xyz
    </pre>
 6. uruchomienie z python dowolnego skryptu przez subprocess
 7. (Maciej) skrypt do obliczeń obliczeń xtb dla zadanego pliku lub wygenerowanego ze smiles 
