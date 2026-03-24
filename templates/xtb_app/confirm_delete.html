@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="xtb-wrapper">
+  <section class="xtb-card" style="max-width:480px; margin: 3rem auto;">
+    <h2 class="xtb-title">🗑 Usuń obliczenie</h2>
+    <p>Czy na pewno chcesz usunąć obliczenie <strong>{{ calc.name }}</strong>?</p>
+    <div style="display:flex; gap:1rem; margin-top:1.4rem;">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="xtb-btn-danger">Tak, usuń</button>
+      </form>
+      <a href="{% url 'xtb:index' %}" class="xtb-btn-run">Anuluj</a>
+    </div>
+  </section>
+</div>
+
+<style>
+.xtb-wrapper { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+.xtb-card    { background: #fff; border: 1px solid #dde; border-radius: 10px; padding: 1.8rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.xtb-title   { margin: 0 0 1rem; color: #1a3a5c; }
+.xtb-btn-run    { background: #1a6fcf; color: #fff; border: none; padding: .6rem 1.4rem; border-radius: 7px; text-decoration: none; font-size: .95rem; }
+.xtb-btn-danger { background: #c0392b; color: #fff; border: none; padding: .6rem 1.4rem; border-radius: 7px; cursor: pointer; font-size: .95rem; }
+</style>
+
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="xtb-wrapper">
+
+  <!-- ═══════════ FORMULARZ ═══════════ -->
+  <section class="xtb-card">
+    <h2 class="xtb-title">⚗️ Nowe obliczenie xTB</h2>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- Nazwa -->
+      <div class="xtb-field">
+        <label>{{ form.name.label }}</label>
+        {{ form.name }}
+        {% if form.name.errors %}<p class="xtb-error">{{ form.name.errors }}</p>{% endif %}
+      </div>
+
+      <!-- Typ wejścia -->
+      <div class="xtb-field">
+        <label>Typ wejścia</label>
+        <div class="xtb-radio-group">
+          {% for choice in form.input_type %}
+            <label class="xtb-radio">{{ choice.tag }} {{ choice.choice_label }}</label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- SMILES -->
+      <div class="xtb-field" id="field-smiles">
+        <label>{{ form.smiles.label }}</label>
+        {{ form.smiles }}
+        {% if form.smiles.errors %}<p class="xtb-error">{{ form.smiles.errors }}</p>{% endif %}
+      </div>
+
+      <!-- Plik XYZ -->
+      <div class="xtb-field" id="field-xyz">
+        <label>{{ form.xyz_file.label }}</label>
+        {{ form.xyz_file }}
+        {% if form.xyz_file.errors %}<p class="xtb-error">{{ form.xyz_file.errors }}</p>{% endif %}
+      </div>
+
+      <!-- Metoda + optymalizacja -->
+      <div class="xtb-row">
+        <div class="xtb-field">
+          <label>{{ form.method.label }}</label>
+          {{ form.method }}
+        </div>
+        <div class="xtb-field xtb-check">
+          <label>{{ form.optimize }} Optymalizacja geometrii</label>
+        </div>
+      </div>
+
+      <!-- Ładunek + multipletowość -->
+      <div class="xtb-row">
+        <div class="xtb-field">
+          <label>{{ form.charge.label }}</label>
+          {{ form.charge }}
+        </div>
+        <div class="xtb-field">
+          <label>{{ form.multiplicity.label }}</label>
+          {{ form.multiplicity }}
+        </div>
+      </div>
+
+      <button type="submit" class="xtb-btn-run">▶ Uruchom obliczenia</button>
+    </form>
+  </section>
+
+  <!-- ═══════════ HISTORIA ═══════════ -->
+  <section class="xtb-card">
+    <h2 class="xtb-title">📋 Historia obliczeń</h2>
+
+    {% if calculations %}
+    <table class="xtb-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nazwa</th>
+          <th>Metoda</th>
+          <th>Typ</th>
+          <th>Status</th>
+          <th>Energia (Eh)</th>
+          <th>Data</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in calculations %}
+        <tr>
+          <td>{{ c.pk }}</td>
+          <td><a href="{% url 'xtb:detail' c.pk %}">{{ c.name }}</a></td>
+          <td>{{ c.get_method_display }}</td>
+          <td>{{ c.get_input_type_display }}</td>
+          <td><span class="xtb-badge xtb-badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
+          <td>{% if c.energy %}{{ c.energy|floatformat:6 }}{% else %}—{% endif %}</td>
+          <td>{{ c.created_at|date:"d.m.Y H:i" }}</td>
+          <td>
+            <a href="{% url 'xtb:delete' c.pk %}" class="xtb-btn-del">🗑</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="xtb-empty">Brak obliczeń. Wypełnij formularz powyżej.</p>
+    {% endif %}
+  </section>
+
+</div>
+
+<style>
+.xtb-wrapper { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+.xtb-card { background: #fff; border: 1px solid #dde; border-radius: 10px; padding: 1.8rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.xtb-title { margin: 0 0 1.4rem; font-size: 1.25rem; color: #1a3a5c; }
+.xtb-field { margin-bottom: 1rem; }
+.xtb-field label { display: block; font-size: .85rem; font-weight: 600; color: #444; margin-bottom: .3rem; }
+.xtb-field input[type=text],
+.xtb-field input[type=number],
+.xtb-field select { width: 100%; padding: .5rem .7rem; border: 1px solid #ccd; border-radius: 6px; font-size: .95rem; }
+.xtb-field input[type=file] { font-size: .9rem; }
+.xtb-radio-group { display: flex; gap: 1.5rem; }
+.xtb-radio { display: flex; align-items: center; gap: .4rem; cursor: pointer; }
+.xtb-row { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.xtb-row .xtb-field { flex: 1; min-width: 140px; }
+.xtb-check { display: flex; align-items: flex-end; padding-bottom: .1rem; }
+.xtb-check label { display: flex; align-items: center; gap: .5rem; font-weight: 400; }
+.xtb-btn-run { background: #1a6fcf; color: #fff; border: none; padding: .65rem 1.8rem; border-radius: 7px; font-size: 1rem; cursor: pointer; margin-top: .5rem; }
+.xtb-btn-run:hover { background: #1558a8; }
+.xtb-btn-del { text-decoration: none; font-size: 1.1rem; }
+.xtb-error { color: #c0392b; font-size: .83rem; margin-top: .2rem; }
+.xtb-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.xtb-table th, .xtb-table td { padding: .55rem .7rem; border-bottom: 1px solid #eef; text-align: left; }
+.xtb-table th { background: #f4f7fb; font-size: .8rem; text-transform: uppercase; color: #667; }
+.xtb-table tr:hover td { background: #f9fbff; }
+.xtb-badge { padding: .2rem .6rem; border-radius: 20px; font-size: .78rem; font-weight: 600; }
+.xtb-badge-done    { background: #d4edda; color: #155724; }
+.xtb-badge-error   { background: #f8d7da; color: #721c24; }
+.xtb-badge-running { background: #fff3cd; color: #856404; }
+.xtb-badge-pending { background: #e2e3e5; color: #383d41; }
+.xtb-empty { color: #888; font-style: italic; }
+</style>
+
+<script>
+// Pokazuj/ukrywaj pola SMILES i XYZ zależnie od wyboru
+function toggleInputFields() {
+  const val = document.querySelector('input[name="input_type"]:checked')?.value;
+  document.getElementById('field-smiles').style.display = (val === 'smiles') ? '' : 'none';
+  document.getElementById('field-xyz').style.display    = (val === 'xyz')    ? '' : 'none';
+}
+document.querySelectorAll('input[name="input_type"]').forEach(r => r.addEventListener('change', toggleInputFields));
+toggleInputFields();
+</script>
+
+{% endblock %}
