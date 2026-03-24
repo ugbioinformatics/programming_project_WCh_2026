@@ -13,7 +13,7 @@ do wykonania
      obabel -:'CC(=O)CC' --gen3d -oxyz -Ostart.xyz
    </pre>
 6. uruchomienie z python dowolnego skryptu przez subprocess
-7. skrypt do obliczeń obliczeń xtb dla zadanego pliku lub wygenerowanego ze smiles
+7.(Maciej) skrypt do obliczeń obliczeń xtb dla zadanego pliku lub wygenerowanego ze smiles 
    <pre>
      /big/appl/xtb-dist/bin/xtb start.xyz --opt --gfn2
    </pre>
