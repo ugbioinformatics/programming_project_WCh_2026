@@ -3,6 +3,7 @@ from .models import Post
 
 class Suma(forms.Form):
     body = forms.CharField(label='Liczby',max_length=40,widget=forms.TextInput(attrs={'size':40, 'maxlength':40}))
+    pole_smiles = forms.CharField(label='SMILES', required = False,widget=forms.TextInput(attrs={'size':40, 'maxlength':400}))
 
     działanie = forms.ChoiceField(choices= 
      (      ("*", "mnożenie"),
