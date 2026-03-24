@@ -7,7 +7,7 @@ do wykonania
    https://etoh.chem.ug.edu.pl/~czarek/projekt/smiles.html
    pobrać https://jsme-editor.github.io/downloads/JSME_2024-04-29.zip i rozpakować w static
    sprzwdzić jak to jest w programming_project_WCh_2025
-4. konwersja smiles do struktury 3d cząsteczki - openbabel lub pubchempy, albo w skrypcie
+4. (Tymek) konwersja smiles do struktury 3d cząsteczki - openbabel lub pubchempy, albo w skrypcie
    <pre>
      obabel -:'CC(=O)CC' --gen3d -oxyz -Ostart.xyz
    </pre>
