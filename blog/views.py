@@ -1,4 +1,5 @@
 from django.shortcuts import render
+import subprocess
 
 # Create your views here.
 from django.views.generic import ListView, DetailView, UpdateView, DeleteView
@@ -9,6 +10,34 @@ from .forms import Suma
 from django.urls import reverse_lazy
 from django.views.generic.edit import FormMixin
 from math import prod
+
+def runProcess(command, cwd=None, timeout=120):
+  """
+  Przykład:
+        from blog.views import runProcess
+
+
+
+        1)
+        ok, out, err = runProcess(['echo', 'test'])
+        print(out)
+
+        2)
+        ok, out, err = runProcess(['ls'], cwd='./PLIKI')
+        print(out)
+    """
+  try:
+    result = subprocess.run(command, capture_output=True, text=True, cwd=cwd,timeout=timeout)
+    return result.returncode == 0, result.stdout, result.stderr
+  
+  except subprocess.TimeoutExpired:
+    print(f"timeout expired: {timeout}")
+  
+
+
+
+
+
 
 class BlogListView(FormMixin, ListView):
   model = Post
