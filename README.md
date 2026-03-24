@@ -10,3 +10,5 @@ git branch -M czarek
 git remote add origin git@github.com:ugbioinformatics/programming_project_WCh_2026.git
 git push -u origin czarek
 </pre>
+
+
