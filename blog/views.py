@@ -13,6 +13,8 @@ from math import prod
 
 def runProcess(command, cwd=None, timeout=120):
   """
+  Uruchamia proces systemowy i zwraca:
+    (czy_sukces, stdout, stderr)
   Przykład:
         from blog.views import runProcess
 
