@@ -13,8 +13,6 @@ class Post(models.Model):
 #    )
     author = models.CharField(max_length=20,default='')
     body = models.TextField()
-    suma = models.IntegerField(default=0)
-    plik1 = models.FileField(default='',upload_to=user_directory_path)
 
     def __str__(self):
         return self.title

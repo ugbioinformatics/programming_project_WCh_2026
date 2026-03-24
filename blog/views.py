@@ -36,29 +36,17 @@ class BlogDeleteView(DeleteView):
     success_url = reverse_lazy('home')  
   
 def suma(request):
-      import pandas as pd
       if request.method == 'POST':
           form = Suma(request.POST,request.FILES)
           if form.is_valid():
               body = form.cleaned_data["body"]
-              dzialanie = form.cleaned_data["działanie"]
-              plik1 = form.cleaned_data["plik"]
-              title ='Suma'
+              title ='Smiles'
               author = "test"
               tmp=body.split()
-              for i in range(0, len(tmp)):
-                    tmp[i]=int(tmp[i])  
-              if dzialanie=='+':
-                 suma=sum(tmp)
-              else:
-                 suma=prod(tmp)
-              post = Post(body=body,title=title,author=author,suma=suma)
+
+              post = Post(body=body,title=title,author=author)
               post.save()
-              if plik1:
-                 post.plik1= plik1
-                 dataframe = pd.read_csv(post.plik1, delimiter=',')
-                 post.suma = dataframe[list(dataframe.columns)[0]].sum()
-                 post.save()
+
               return redirect('/')
       else:
           form=Suma()
