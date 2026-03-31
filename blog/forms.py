@@ -9,6 +9,7 @@ class Suma(forms.Form):
         cleaned_data = super(Suma, self).clean()
         plik=cleaned_data.get("plik")
         pole_smiles=cleaned_data.get("pole_smiles")
+
         if pole_smiles == "":  
                 self.add_error('pole_smiles','podaj SMILES')
 
@@ -18,3 +19,9 @@ class XTBInputForm(forms.Form):
     smiles = forms.CharField(required=False, label='SMILES',
                              widget=forms.TextInput(attrs={'placeholder': 'np. CC(=O)O'}))
     xyz_file = forms.FileField(required=False, label='Plik .xyz')
+
+        if pole_smiles and plik:
+        	self.add_error('pole_smiles', "Zdecyduj sie")
+        if not pole_smiles and not plik:
+        	self.add_error('pole_smiles', "Wpisz cos") 
+       
