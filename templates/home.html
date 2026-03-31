@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% include "przycisk_Get_SMAILS.html" %}
+
+<p>
+<form action="post/suma/" method="POST" enctype="multipart/form-data" >
+                 {% csrf_token %}
+                 <table>
+                 {{ form.as_table }}
+                 </table>
+<button type="submit" class="save btn btn-default">Save & submit</button>
+</form>
+
+</div>
+{% for post in post_list %}
+<div class="post-entry">
+    <h2><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
+</div>
+{% endfor %}
+{% endblock content %}
