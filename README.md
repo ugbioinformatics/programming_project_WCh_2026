@@ -17,4 +17,7 @@ do wykonania
    <pre>
      /big/appl/xtb-dist/bin/xtb start.xyz --opt --gfn2
    </pre>
-   
+   <pre>
+      python manage.py makemigrations blog
+      python manage.py migrate
+   </pre>
