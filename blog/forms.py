@@ -17,3 +17,4 @@ class Suma(forms.Form):
         	self.add_error('pole_smiles', 'plik', "Zdecyduj sie") 
                
 
+
