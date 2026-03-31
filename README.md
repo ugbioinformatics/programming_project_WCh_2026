@@ -27,3 +27,10 @@ source ~/env/bin/activate.csh
 ./manage.py migrate
 ./manage.py runserver
 </pre>
+
+tworzenie nowej gałęzi i merge do niej gałęzi test
+<pre>
+git switch -c test_test
+git merge origin/test
+git push -u origin test_test
+</pre>
