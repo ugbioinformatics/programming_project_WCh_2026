@@ -28,3 +28,9 @@ class Suma(forms.Form):
             except:
                 self.add_error('body','zła lista')
 
+class XTBInputForm(forms.Form):
+    INPUT_CHOICES = [('smiles', 'SMILES'), ('xyz', 'Plik XYZ')]
+    input_type = forms.ChoiceField(choices=INPUT_CHOICES, widget=forms.RadioSelect)
+    smiles = forms.CharField(required=False, label='SMILES',
+                             widget=forms.TextInput(attrs={'placeholder': 'np. CC(=O)O'}))
+    xyz_file = forms.FileField(required=False, label='Plik .xyz')
