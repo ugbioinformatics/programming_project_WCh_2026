@@ -12,8 +12,7 @@ class Post(models.Model):
 #        on_delete=models.CASCADE,
 #    )
     author = models.CharField(max_length=20,default='')
-    body = models.TextField()
-    suma = models.IntegerField(default=0)
+    smiles = models.TextField(default='')
     plik1 = models.FileField(default='',upload_to=user_directory_path)
 
     def __str__(self):
