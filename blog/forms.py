@@ -8,11 +8,7 @@ class Suma(forms.Form):
     def clean(self):
         cleaned_data = super(Suma, self).clean()
         plik=cleaned_data.get("plik")
-        pole_smiles=cleaned_data.get("pole_smiles")
-
-        if pole_smiles == "":  
-                self.add_error('pole_smiles','podaj SMILES')
-            
+        pole_smiles=cleaned_data.get("pole_smiles") 
         if pole_smiles and plik:
         	self.add_error('pole_smiles', "Zdecyduj sie")
         if not pole_smiles and not plik:
