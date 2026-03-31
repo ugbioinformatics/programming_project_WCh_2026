@@ -34,3 +34,8 @@ git switch -c test_test
 git merge origin/test
 git push -u origin test_test
 </pre>
+
+sprawdzamy gałęzie na github i lokalnie
+<pre>
+git remote show origin
+</pre>
