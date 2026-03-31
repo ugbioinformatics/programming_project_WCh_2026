@@ -86,8 +86,7 @@ def smiles3de(request):
             return JsonResponse({'error': 'Nie udało się wygenerować 3D'}, status=500)
 
         AllChem.UFFOptimizeMolecule(mol)
-
-        # 🔥 KLUCZOWE
+      
         mol_block = Chem.MolToMolBlock(mol)
 
         return JsonResponse({
