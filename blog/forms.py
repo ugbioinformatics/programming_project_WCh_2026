@@ -12,6 +12,11 @@ class Suma(forms.Form):
 
         if pole_smiles == "":  
                 self.add_error('pole_smiles','podaj SMILES')
+            
+        if pole_smiles and plik:
+        	self.add_error('pole_smiles', "Zdecyduj sie")
+        if not pole_smiles and not plik:
+        	self.add_error('pole_smiles', "Wpisz cos") 
 
 class XTBInputForm(forms.Form):
     INPUT_CHOICES = [('smiles', 'SMILES'), ('xyz', 'Plik XYZ')]
@@ -20,8 +25,4 @@ class XTBInputForm(forms.Form):
                              widget=forms.TextInput(attrs={'placeholder': 'np. CC(=O)O'}))
     xyz_file = forms.FileField(required=False, label='Plik .xyz')
 
-        if pole_smiles and plik:
-        	self.add_error('pole_smiles', "Zdecyduj sie")
-        if not pole_smiles and not plik:
-        	self.add_error('pole_smiles', "Wpisz cos") 
        
