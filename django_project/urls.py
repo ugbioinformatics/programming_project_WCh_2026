@@ -19,8 +19,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("", include("blog.urls"))
-    path('xtb/', include('xtb_app.urls')), # new
+    path("", include("blog.urls")),
 ]
 
 from django.conf import settings
