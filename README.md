@@ -1,3 +1,4 @@
+
 pierwsze uruchomienie
 <pre>
 git clone git@github.com:ugbioinformatics/programming_project_WCh_2026.git
@@ -8,3 +9,4 @@ source ~/env/bin/activate.csh
 ./manage.py migrate
 ./manage.py runserver
 </pre>
+
