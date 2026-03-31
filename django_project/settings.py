@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "xtb-app",
     "blog.apps.BlogConfig",
     'django.contrib.admin',
     'django.contrib.auth',
@@ -122,6 +123,8 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+XTB_BINARY    = '/big/appl/xtb-dist/bin/xtb'
+OBABEL_BINARY = 'obabel'
 
 import os
 MEDIA_URL = '/PLIKI/'
