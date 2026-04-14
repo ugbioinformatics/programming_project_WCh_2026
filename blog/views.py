@@ -84,22 +84,19 @@ from .models import XTBCalculation
 
 XTB_BIN = '/big/appl/xtb-dist/bin/xtb'
 
-def smiles_to_xyz(smiles: str) -> str:
+def smiles_to_xyz(smiles: str,tmpdir) -> str:
     """Konwersja SMILES → XYZ przez openbabel."""
     result = subprocess.run(
-        ['obabel', f'-:{smiles}', '-oxyz', '--gen3d'],
-        capture_output=True, text=True, timeout=30
-    )
+        ['/usr/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d', '-Ostart.xyz'],
+        capture_output=True, text=True, timeout=30,
+        cwd=tmpdir
+      )
     if result.returncode != 0:
         raise RuntimeError(f"obabel error: {result.stderr}")
     return result.stdout
 
-def run_xtb(xyz_content: str):
-    """Uruchamia xtb --opt --gfn2, zwraca (log, opt_xyz, energy)."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        xyz_path = os.path.join(tmpdir, 'start.xyz')
-        with open(xyz_path, 'w') as f:
-            f.write(xyz_content)
+def run_xtb(xyz_content: str,tmpdir):
+        """Uruchamia xtb --opt --gfn2, zwraca (log, opt_xyz, energy)."""
 
         result = subprocess.run(
             [XTB_BIN, 'start.xyz', '--opt', '--gfn2'],
@@ -120,7 +117,7 @@ def run_xtb(xyz_content: str):
         opt_path = os.path.join(tmpdir, 'xtbopt.xyz')
         opt_xyz = open(opt_path).read() if os.path.exists(opt_path) else ''
 
-    return log, opt_xyz, energy
+        return log, opt_xyz, energy
 
 
 def xtb_calc_view(request):
@@ -137,12 +134,35 @@ def xtb_calc_view(request):
                 if input_type == 'smiles':
                     smiles = form.cleaned_data['smiles']
                     calc.smiles = smiles
-                    xyz_content = smiles_to_xyz(smiles)
+                    title ='Smiles'
+                    author = "test"
+                    post = Post(smiles=smiles,title=title,author=author)
+                    post.save()
+
+                    from django.conf import settings
+                    import os
+                    tmpdir=settings.MEDIA_ROOT + '/' + str(post.id)
+                    if (not os.path.isdir(tmpdir)):
+                        os.mkdir(tmpdir)                     
+                    
+                    xyz_content = smiles_to_xyz(smiles,tmpdir)
                 else:
+                    title ='XYZ'
+                    author = "test"
+                    post = Post(smiles='',title=title,author=author)
+                    post.save()
+
+                    from django.conf import settings
+                    import os
+                    tmpdir=settings.MEDIA_ROOT + '/' + str(post.id)
+                    plik1 = form.cleaned_data["xyz_file"]
+                    post.plik1= plik1
+                    post.save()
+
                     xyz_content = request.FILES['xyz_file'].read().decode('utf-8')
 
                 calc.input_xyz = xyz_content
-                log, opt_xyz, energy = run_xtb(xyz_content)
+                log, opt_xyz, energy = run_xtb(xyz_content,tmpdir)
                 calc.output_log = log
                 calc.optimized_xyz = opt_xyz
                 calc.energy = energy
