@@ -1,0 +1,1 @@
+katalog z wynikami obliczen
