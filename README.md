@@ -1,4 +1,3 @@
-# programming_project_WCh_2026
 
 do wykonania
 
@@ -16,6 +15,9 @@ do wykonania
    <pre>
      /big/appl/xtb-dist/bin/xtb start.xyz --opt --gfn2
    </pre>
+
+   
+
    
 pierwsze uruchomienie
 <pre>
@@ -41,5 +43,4 @@ sprawdzamy gałęzie na github i lokalnie
 <pre>
 git remote show origin
 </pre>
-
 
