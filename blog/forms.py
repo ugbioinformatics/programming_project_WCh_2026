@@ -9,3 +9,16 @@ class Suma(forms.Form):
             'placeholder': 'Np. C1=CC=CC=C1'
         })
     )
+
+#class Suma(forms.Form):
+#    pole_smiles = forms.CharField(label='SMILES', required = False,widget=forms.TextInput(attrs={'size':40, 'maxlength':400, 'placeholder': 'Np. C1=CC=CC=C1'}))
+#    plik = forms.FileField(label='plik z danymi',required=False)
+
+ #   def clean(self):
+  #      cleaned_data = super(Suma, self).clean()
+   #     plik=cleaned_data.get("plik")
+    #    pole_smiles=cleaned_data.get("pole_smiles")
+     #   if pole_smiles and plik:
+     #   	self.add_error('pole_smiles', "Zdecyduj sie")
+      #  if not pole_smiles and not plik:
+       # 	self.add_error('pole_smiles', "Wpisz cos")
