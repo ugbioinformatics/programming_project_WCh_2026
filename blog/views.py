@@ -144,6 +144,18 @@ def xtb_calc_view(request):
                     
                     xyz_content = smiles_to_xyz(smiles,tmpdir)
                 else:
+                    title ='XYZ'
+                    author = "test"
+                    post = Post(smiles='',title=title,author=author)
+                    post.save()
+
+                    from django.conf import settings
+                    import os
+                    tmpdir=settings.MEDIA_ROOT + '/' + str(post.id)
+                    plik1 = form.cleaned_data["xyz_file"]
+                    post.plik1= plik1
+                    post.save()
+
                     xyz_content = request.FILES['xyz_file'].read().decode('utf-8')
 
                 calc.input_xyz = xyz_content
