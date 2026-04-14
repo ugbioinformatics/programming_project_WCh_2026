@@ -146,6 +146,8 @@ def run_xtb(xyz_content: str,tmpdir):
         )
         log = result.stdout + result.stderr
 
+# TUUUUU
+
         # Wyciągnij energię z logu
         energy = None
         match = re.search(r'TOTAL ENERGY\s+([-\d.]+)', log)
@@ -157,6 +159,7 @@ def run_xtb(xyz_content: str,tmpdir):
         opt_xyz = open(opt_path).read() if os.path.exists(opt_path) else ''
 
         return log, opt_xyz, energy
+
 
 def xtb_calc_view(request):
     form = XTBInputForm()
@@ -211,4 +214,5 @@ def xtb_calc_view(request):
 
             calc.save()
 
-    return render(request, 'xtb_calc.html', {'form': form, 'calc': calc})
+    return render(request, 'xtb_calc.html', {'form': form, 'calc': calc,})
+
