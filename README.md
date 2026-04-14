@@ -17,7 +17,7 @@ do wykonania
    </pre>
 8. (Martyna) singnals.py z https://github.com/ugbioinformatics/programming_project_WCh_2025/blob/main/mopac_portal/blog/signals.py
    dla kasowanie plików wraz z kasowanie wpisu do bazy danych
-9. http://127.0.0.1:8000/xtb/ przenieść do strony głownej
+9. (DOROTa) http://127.0.0.1:8000/xtb/ przenieść do strony głownej
 10. (Olek)opacje konwersji obabel albo rdkit na stronie głownej
 11. wpisy wybranych (energia) wynikow do bazy danych razem z ich wyświetlaniem
 12. naprawić obliczenia startujące z pliku xyz
