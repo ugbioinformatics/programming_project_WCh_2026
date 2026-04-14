@@ -15,7 +15,7 @@ do wykonania
    <pre>
      /big/appl/xtb-dist/bin/xtb start.xyz --opt --gfn2
    </pre>
-8. singnals.py z https://github.com/ugbioinformatics/programming_project_WCh_2025/blob/main/mopac_portal/blog/signals.py
+8. (Martyna) singnals.py z https://github.com/ugbioinformatics/programming_project_WCh_2025/blob/main/mopac_portal/blog/signals.py
    dla kasowanie plików wraz z kasowanie wpisu do bazy danych
 9. http://127.0.0.1:8000/xtb/ przenieść do strony głownej
 10. opacje konwersji obabel albo rdkit na stronie głownej
