@@ -16,4 +16,59 @@
     <h2><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
 </div>
 {% endfor %}
+
+<!-- === SMILES 3D VIEWER === -->
+<div style="margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+  <h2>Podgląd 3D cząsteczki (SMILES)</h2>
+
+  <div class="input-group" style="max-width: 420px;">
+    <input type="text" id="smilesInput" class="form-control"
+           placeholder="Np. C1=CC=CC=C1 (benzen)">
+    <span class="input-group-btn">
+      <button class="btn btn-default" onclick="loadSmiles()">Pokaż 3D</button>
+    </span>
+  </div>
+
+  <p id="smilesError" class="text-danger" style="display:none; margin-top:8px;"></p>
+  <div id="smilesViewer" style="width:500px; height:400px; margin-top:15px; display:none;"></div>
+</div>
+
+<script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+<script>
+document.getElementById("smilesInput").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") loadSmiles();
+});
+
+function loadSmiles() {
+    var smiles = document.getElementById("smilesInput").value.trim();
+    var viewerDiv = document.getElementById("smilesViewer");
+    var errorP = document.getElementById("smilesError");
+
+    errorP.style.display = "none";
+    if (!smiles) { alert("Wpisz SMILES!"); return; }
+
+    fetch("{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles))
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.error) {
+                errorP.textContent = "Błąd: " + data.error;
+                errorP.style.display = "block";
+                viewerDiv.style.display = "none";
+                return;
+            }
+            viewerDiv.style.display = "block";
+            viewerDiv.innerHTML = "";
+            var viewer = $3Dmol.createViewer(viewerDiv, { backgroundColor: "white" });
+            viewer.addModel(data.mol_block, "mol");
+            viewer.setStyle({}, { stick: {}, sphere: { scale: 0.3 } });
+            viewer.zoomTo();
+            viewer.render();
+        })
+        .catch(function(err) {
+            errorP.textContent = "Błąd połączenia: " + err;
+            errorP.style.display = "block";
+        });
+}
+</script>
+
 {% endblock content %}

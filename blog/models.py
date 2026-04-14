@@ -7,18 +7,11 @@ def user_directory_path(instance, filename):
 
 class Post(models.Model):
     title = models.CharField(max_length=200)
-#    author = models.ForeignKey(
-#        "auth.User",
-#        on_delete=models.CASCADE,
-#    )
-    author = models.CharField(max_length=20,default='')
-    body = models.TextField()
-    suma = models.IntegerField(default=0)
-    plik1 = models.FileField(default='',upload_to=user_directory_path)
+    author = models.CharField(max_length=20, default='')
+    smiles = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
         return self.title
 
     def get_absolute_url(self):
         return reverse("post_detail", kwargs={"pk": self.pk})
-        

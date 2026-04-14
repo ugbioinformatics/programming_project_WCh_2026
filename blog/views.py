@@ -16,7 +16,11 @@ class BlogListView(FormMixin, ListView):
   model = Post
   template_name = "home.html"
   form_class = Suma
-  
+
+class BlogUpdateView(UpdateView):
+    model = Post
+    template_name = "post_edit.html"
+    fields = ["title"]
 
 class BlogDetailView(DetailView): 
   model = Post
@@ -27,46 +31,32 @@ class BlogCreateView(CreateView): # new
   template_name = "post_new.html"
   fields = ["title", "author", "body"]
   
-class BlogUpdateView(UpdateView): # new
-    model = Post
-    template_name = "post_edit.html"
-    fields = ["title"]
+
 
 class BlogDeleteView(DeleteView):
     model = Post
     template_name='post_delete.html'
     success_url = reverse_lazy('home') 
 
-  
 def suma(request):
-      import pandas as pd
-      if request.method == 'POST':
-          form = Suma(request.POST,request.FILES)
-          if form.is_valid():
-              body = form.cleaned_data["body"]
-              dzialanie = form.cleaned_data["działanie"]
-              plik1 = form.cleaned_data["plik"]
-              title ='Suma'
-              author = "test"
-              tmp=body.split()
-              for i in range(0, len(tmp)):
-                    tmp[i]=int(tmp[i])  
-              if dzialanie=='+':
-                 suma=sum(tmp)
-              else:
-                 suma=prod(tmp)
-              post = Post(body=body,title=title,author=author,suma=suma)
-              post.save()
-              if plik1:
-                 post.plik1= plik1
-                 dataframe = pd.read_csv(post.plik1, delimiter=',')
-                 post.suma = dataframe[list(dataframe.columns)[0]].sum()
-                 post.save()
-              return redirect('/')
-      else:
-          form=Suma()
-      return render(request, 'suma.html', {'form': form })
-      
+    if request.method == 'POST':
+        form = Suma(request.POST)
+        if form.is_valid():
+            smiles = form.cleaned_data["smiles"]
+
+            post = Post(
+                title="SMILES",
+                author="test",
+                smiles=smiles
+            )
+            post.save()
+
+            return redirect('/')
+    else:
+        form = Suma()
+
+    return render(request, 'suma.html', {'form': form})
+
 def smiles3de(request):
     smiles = request.GET.get('smiles')
 
