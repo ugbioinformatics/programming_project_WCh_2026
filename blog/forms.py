@@ -9,12 +9,16 @@ class Suma(forms.Form):
         cleaned_data = super(Suma, self).clean()
         plik=cleaned_data.get("plik")
         pole_smiles=cleaned_data.get("pole_smiles")
-        if pole_smiles == "":  
-                self.add_error('pole_smiles','podaj SMILES')
-        if not pole_smiles and not plik:
-        	self.add_error('pole_smiles', 'plik', "Wpisz cos")
         if pole_smiles and plik:
-        	self.add_error('pole_smiles', 'plik', "Zdecyduj sie") 
-               
+        	self.add_error('pole_smiles', "Zdecyduj sie")
+        if not pole_smiles and not plik:
+        	self.add_error('pole_smiles', "Wpisz cos") 
 
+class XTBInputForm(forms.Form):
+    INPUT_CHOICES = [('smiles', 'SMILES'), ('xyz', 'Plik XYZ')]
+    input_type = forms.ChoiceField(choices=INPUT_CHOICES, widget=forms.RadioSelect)
+    smiles = forms.CharField(required=False, label='SMILES',
+                             widget=forms.TextInput(attrs={'placeholder': 'np. CC(=O)O'}))
+    xyz_file = forms.FileField(required=False, label='Plik .xyz')
 
+       
