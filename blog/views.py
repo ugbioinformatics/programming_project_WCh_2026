@@ -128,7 +128,7 @@ class BlogDeleteView(DeleteView):
 
 def suma(request):
     if request.method == 'POST':
-        form = Suma(request.POST)
+        form = Suma(request.POST,request.FILES)
 
         if form.is_valid():
             smiles = form.cleaned_data["smiles"]
