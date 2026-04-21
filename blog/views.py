@@ -70,9 +70,23 @@ def suma(request):
               author = "test"
               post = Post(smiles=smiles,title=title,author=author)
               post.save()
+
+              from django.conf import settings
+              tmpdir=settings.MEDIA_ROOT + '/' + str(post.id)
+
               if plik1:
                  post.plik1= plik1
                  post.save()
+                 xyz_content = ''                 
+              else:
+                 import os
+                 if (not os.path.isdir(tmpdir)):
+                        os.mkdir(tmpdir)                     
+                 xyz_content = smiles_to_xyz(smiles,tmpdir)
+
+            
+              log, opt_xyz, energy = run_xtb(xyz_content,tmpdir)
+
               return redirect('/')
       else:
           form=Suma()
