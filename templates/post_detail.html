@@ -1,15 +1,67 @@
 {% extends "base.html" %}
 {% block content %}
+
 <div class="post-entry">
-<h2>{{ post.title }}</h2>
-<p>{{ post.body }}</p>
-<p>Suma = {{ post.suma }}</p>
-{% if post.plik1 %}
-<p> <a href="/PLIKI/{{post.id}}/plik.txt"> dane</a>
-{% endif %} 
+
+  {% if post.smiles %}
+  <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+
+    <h3>Cząsteczka: {{ post.smiles }}</h3>
+
+    <p id="loading">Ładowanie cząsteczki...</p>
+    <p id="smilesError" style="color:red;"></p>
+
+    <div id="smilesViewer"
+         style="width:600px; height:400px; position:relative;">
+    </div>
+
+  </div>
+
+  <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+
+  <script>
+    const smiles = "{{ post.smiles }}";
+    const url = "{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles);
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+
+        document.getElementById("loading").style.display = "none";
+
+        if (data.error) {
+          document.getElementById("smilesError").textContent = data.error;
+          return;
+        }
+
+        const viewerDiv = document.getElementById("smilesViewer");
 
 
-<p><a href="{% url 'post_delete' post.pk %}">+ Delete Blog Post</a></p>
+
+        const viewer = $3Dmol.createViewer(viewerDiv, {
+          backgroundColor: "white"
+        });
+
+        viewer.addModel(data.mol_block, "mol");
+
+        viewer.setStyle({}, {
+          stick: {},
+          sphere: { scale: 0.3 }
+        });
+
+        viewer.zoomTo();
+        viewer.render();
+      })
+      .catch(err => {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("smilesError").textContent =
+          "Błąd: " + err;
+      });
+  </script>
+
+  {% endif %}
+  <p><a href="{% url 'post_delete' post.pk %}">+ Delete Blog Post</a></p>
 
 </div>
+
 {% endblock content %}

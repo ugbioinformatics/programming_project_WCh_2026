@@ -1,3 +1,9 @@
+from django.http import JsonResponse
+from rdkit import Chem
+from rdkit.Chem import AllChem
+from . import views
+
+
 from django.shortcuts import render
 import subprocess
 
@@ -59,12 +65,13 @@ class BlogDeleteView(DeleteView):
     template_name='post_delete.html'
     success_url = reverse_lazy('home')  
   
+
 def suma(request):
       import pandas as pd
       if request.method == 'POST':
           form = Suma(request.POST,request.FILES)
           if form.is_valid():
-              smiles = form.cleaned_data["pole_smiles"]
+              smiles = form.cleaned_data["smiles"]
               plik1 = form.cleaned_data["plik"]
               title ='Smiles'
               author = "test"
@@ -92,6 +99,40 @@ def suma(request):
           form=Suma()
       return render(request, 'suma.html', {'form': form })
       
+def smiles3de(request):
+    smiles = request.GET.get('smiles')
+
+    if not smiles:
+        return JsonResponse({'error': 'Brak SMILES'}, status=400)
+
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            return JsonResponse({'error': 'Niepoprawny SMILES'}, status=400)
+
+        mol = Chem.AddHs(mol)
+
+        # lepszy embedding
+        result = AllChem.EmbedMolecule(mol, AllChem.ETKDG())
+        if result != 0:
+            return JsonResponse({'error': 'Nie udało się wygenerować 3D'}, status=500)
+
+        AllChem.UFFOptimizeMolecule(mol)
+
+        mol_block = Chem.MolToMolBlock(mol)
+
+        return JsonResponse({
+            "mol_block": mol_block
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+def smiles_page(request):
+    return render(request, 'smiles.html')
+
+
+
 import subprocess, tempfile, os, re
 from .forms import XTBInputForm
 from .models import XTBCalculation
