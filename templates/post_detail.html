@@ -4,6 +4,7 @@
 <div class="post-entry">
 
   {% if post.smiles %}
+
   <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
 
     <h3>Cząsteczka: {{ post.smiles }}</h3>
@@ -17,26 +18,32 @@
 
   </div>
 
+  {{ post.smiles|json_script:"smiles-data" }}
+
   <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
 
   <script>
-    const smiles = "{{ post.smiles }}";
-    const url = "{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles);
+    document.addEventListener("DOMContentLoaded", async () => {
 
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
+      const loading = document.getElementById("loading");
+      const errorBox = document.getElementById("smilesError");
+      const viewerDiv = document.getElementById("smilesViewer");
 
-        document.getElementById("loading").style.display = "none";
+      const smiles = JSON.parse(document.getElementById("smiles-data").textContent);
+      const url = "{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles);
+
+      let pulseInterval = null;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        loading.style.display = "none";
 
         if (data.error) {
-          document.getElementById("smilesError").textContent = data.error;
+          errorBox.textContent = data.error;
           return;
         }
-
-        const viewerDiv = document.getElementById("smilesViewer");
-
-
 
         const viewer = $3Dmol.createViewer(viewerDiv, {
           backgroundColor: "white"
@@ -45,30 +52,66 @@
         viewer.addModel(data.mol_block, "mol");
 
         viewer.setStyle({}, {
-          stick: {},
-          sphere: { scale: 0.3 }
+          stick: { radius: 0.2, colorscheme: "CPK" },
+          sphere: { scale: 0.28, colorscheme: "CPK" }
         });
 
+        viewer.setClickable({}, true, function(atom) {
+
+          if (pulseInterval) {
+            clearInterval(pulseInterval);
+            pulseInterval = null;
+          }
+
+          viewer.setStyle({}, {
+            stick: { radius: 0.2, colorscheme: "CPK" },
+            sphere: { scale: 0.28, colorscheme: "CPK" }
+          });
+
+          let scale = 0.6;
+          let growing = false;
+
+
+          pulseInterval = setInterval(() => {
+
+            if (growing) {
+              scale -= 0.08;
+              if (scale <= 0.3) growing = false;
+            } else {
+              scale += 0.08;
+              if (scale >= 0.6) growing = true;
+            }
+
+            viewer.setStyle({ serial: atom.serial }, {
+              stick: {
+                radius: 0.35,
+                colorscheme: "CPK"
+              },
+              sphere: {
+                scale: scale,
+                colorscheme: "CPK"
+              }
+            });
+
+            viewer.render();
+
+          }, 60);
+        });
+
+
         viewer.zoomTo();
+        viewer.zoom(1.1);
+        viewer.center();
         viewer.render();
-      })
-      .catch(err => {
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("smilesError").textContent =
-          "Błąd: " + err;
-      });
+
+      } catch (err) {
+        loading.style.display = "none";
+        errorBox.textContent = "Błąd: " + err.message;
+      }
+    });
   </script>
 
   {% endif %}
-  <p>
-  <script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      var stage = new NGL.Stage("viewport");
-      stage.loadFile("/PLIKI/{{post.id}}/xtbopt.mol2", {defaultRepresentation: true});
-    });
-  </script>
-  <div id="viewport" style="width:400px; height:300px;"></div>
 
   <p><a href="{% url 'post_delete' post.pk %}">+ Delete Blog Post</a></p>
 
