@@ -5,6 +5,13 @@ class Suma(forms.Form):
     smiles = forms.CharField(label='SMILES', required = False,widget=forms.TextInput(attrs={'size':40, 'maxlength':400}))
     plik = forms.FileField(label='plik z danymi',required=False)
     
+    do_hess = forms.BooleanField(
+        required=False,
+        label='Oblicz częstotliwości drgań (--hess)',
+        initial=False
+    )
+    
+    
     def clean(self):
         cleaned_data = super(Suma, self).clean()
         plik=cleaned_data.get("plik")
@@ -20,5 +27,6 @@ class XTBInputForm(forms.Form):
     smiles = forms.CharField(required=False, label='SMILES',
                              widget=forms.TextInput(attrs={'placeholder': 'np. CC(=O)O'}))
     xyz_file = forms.FileField(required=False, label='Plik .xyz')
+
 
        
