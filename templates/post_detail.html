@@ -60,6 +60,16 @@
   </script>
 
   {% endif %}
+  <p>
+  <script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var stage = new NGL.Stage("viewport");
+      stage.loadFile("/PLIKI/{{post.id}}/xtbopt.mol2", {defaultRepresentation: true});
+    });
+  </script>
+  <div id="viewport" style="width:400px; height:300px;"></div>
+
   <p><a href="{% url 'post_delete' post.pk %}">+ Delete Blog Post</a></p>
 
 </div>
