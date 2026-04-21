@@ -50,7 +50,21 @@ def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
 
 def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
     result = subprocess.run(
-        ['/usr/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d'],
+        ['/usr/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d','-Ostart.xyz'],
+        capture_output=True,
+        text=True,
+        cwd=tmpdir,
+        timeout=30
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr)
+
+    return result.stdout
+
+def xyz_to_mol2_xtbopt(tmpdir):
+    result = subprocess.run(
+        ['/usr/bin/obabel', '-ixyz','xtbopt.xyz', '-omol2', '-Oxtbopt.mol2'],
         capture_output=True,
         text=True,
         cwd=tmpdir,
@@ -118,13 +132,31 @@ def suma(request):
 
         if form.is_valid():
             smiles = form.cleaned_data["smiles"]
-
+            plik1 = form.cleaned_data["plik"]
+            
             post = Post(
                 title="SMILES",
                 author="test",
                 smiles=smiles
             )
             post.save()
+
+            from django.conf import settings
+            tmpdir=settings.MEDIA_ROOT + '/' + str(post.id)
+
+            if plik1:
+                 post.plik1= plik1
+                 post.save()
+                 xyz_content = ''                 
+            else:
+                 import os
+                 if (not os.path.isdir(tmpdir)):
+                        os.mkdir(tmpdir)                   
+                 xyz_content = smiles_to_xyz_obabel(smiles,tmpdir)
+            log, opt_xyz, energy = run_xtb(tmpdir)
+            log1 = xyz_to_mol2_xtbopt(tmpdir)
+
+
 
             return redirect('/')
 
