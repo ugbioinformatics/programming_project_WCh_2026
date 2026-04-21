@@ -1,13 +1,17 @@
 from django import forms
 
 class Suma(forms.Form):
-    smiles = forms.CharField(
-        label='SMILES',
-        required=False,
-        widget=forms.TextInput(attrs={'size': 40, 'maxlength': 400})
-    )
-    plik = forms.FileField(label='plik z danymi', required=False)
 
+    smiles = forms.CharField(label='SMILES', required = False,widget=forms.TextInput(attrs={'size':40, 'maxlength':400}))
+    plik = forms.FileField(label='plik z danymi',required=False)
+    
+    do_hess = forms.BooleanField(
+        required=False,
+        label='Oblicz częstotliwości drgań (--hess)',
+        initial=False
+    )
+    
+    
     def clean(self):
         cleaned_data = super().clean()
         plik = cleaned_data.get("plik")
@@ -53,3 +57,4 @@ class XTBInputForm(forms.Form):
         required=False,
         label='Plik .xyz'
     )
+       

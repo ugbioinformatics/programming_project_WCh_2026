@@ -15,5 +15,6 @@ urlpatterns = [
    path("smiles3d/", views.smiles3de, name="smiles3de"),
 
    path('xtb/', views.xtb_calc_view, name='xtb_calc'),
+   path('download-g98/<int:post_id>/', views.download_g98, name='download_g98'),
 ]
 
