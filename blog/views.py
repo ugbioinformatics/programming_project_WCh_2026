@@ -18,7 +18,6 @@ from .forms import Suma, XTBInputForm
 
 
 
-
 def runProcess(command, cwd=None, timeout=120):
     try:
         result = subprocess.run(
@@ -29,6 +28,7 @@ def runProcess(command, cwd=None, timeout=120):
             timeout=timeout
         )
         return result.returncode == 0, result.stdout, result.stderr
+
     except subprocess.TimeoutExpired:
         return False, "", f"timeout expired: {timeout}"
 
@@ -51,6 +51,7 @@ def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
     return Chem.MolToXYZBlock(mol)
 
 
+
 def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
     result = subprocess.run(
         ['/usr/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d', '-Ostart.xyz'],
@@ -65,6 +66,7 @@ def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
 
     path = os.path.join(tmpdir, 'start.xyz')
     return open(path).read() if os.path.exists(path) else ""
+
 
 
 def smiles_to_xyz(smiles, tmpdir):
@@ -83,7 +85,6 @@ def smiles_to_2d_svg(smiles: str) -> str:
     drawer.FinishDrawing()
 
     return drawer.GetDrawingText()
-
 
 
 
@@ -115,6 +116,7 @@ def run_xtb(xyz_content, tmpdir):
     opt_xyz = open(opt_path).read() if os.path.exists(opt_path) else ''
 
     return log, opt_xyz, energy
+
 
 
 def run_hess(tmpdir):
@@ -154,7 +156,6 @@ def run_hess(tmpdir):
 
 
 
-
 class BlogListView(FormMixin, ListView):
     model = Post
     template_name = "home.html"
@@ -176,7 +177,6 @@ class BlogCreateView(CreateView):
     model = Post
     template_name = "post_new.html"
     fields = ["title", "author", "body"]
-
 
 
 
@@ -229,6 +229,13 @@ def suma(request):
                 'svg_2d': svg_2d,
             }
 
+            post.input_xyz = xyz_content
+            post.output_log = log
+            post.optimized_xyz = opt_xyz
+            post.energy = energy
+            post.status = 'done' if opt_xyz else 'error'
+            post.save()
+
             if do_hess and opt_xyz:
                 hess_data = run_hess(tmpdir)
                 hess_data['has_imaginary'] = any(f < 0 for f in hess_data['frequencies'])
@@ -255,9 +262,11 @@ def suma(request):
 def download_g98(request, post_id):
     file_path = os.path.join(settings.MEDIA_ROOT, str(post_id), 'g98.out')
     if os.path.exists(file_path):
-        return FileResponse(open(file_path, 'rb'),
-                            as_attachment=True,
-                            filename=f'g98_post_{post_id}.out')
+        return FileResponse(
+            open(file_path, 'rb'),
+            as_attachment=True,
+            filename=f'g98_post_{post_id}.out'
+        )
     raise Http404("Plik g98.out nie istnieje.")
 
 
@@ -288,6 +297,7 @@ def smiles3de(request):
 
 def smiles_page(request):
     return render(request, 'smiles.html')
+
 
 
 def xtb_calc_view(request):
