@@ -21,4 +21,4 @@ class XTBInputForm(forms.Form):
                              widget=forms.TextInput(attrs={'placeholder': 'np. CC(=O)O'}))
     xyz_file = forms.FileField(required=False, label='Plik .xyz')
 
-       
+

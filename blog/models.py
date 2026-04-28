@@ -14,7 +14,7 @@ class Post(models.Model):
     author = models.CharField(max_length=20,default='')
     smiles = models.TextField(default='')
     plik1 = models.FileField(default='',upload_to=user_directory_path)
-
+  
     def __str__(self):
         return self.title
 
