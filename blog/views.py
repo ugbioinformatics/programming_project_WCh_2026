@@ -80,27 +80,6 @@ def xyz_to_mol2(tmpdir,xyz,mol2):
 
 XTB_BIN = '/big/appl/xtb-dist/bin/xtb'
 
-def run_xtb(tmpdir: str):
-    result = subprocess.run(
-        [XTB_BIN, 'start.xyz', '--opt', '--gfn2'],
-        capture_output=True,
-        text=True,
-        cwd=tmpdir,
-        timeout=300
-    )
-
-    log = result.stdout + result.stderr
-
-    energy = None
-    match = re.search(r'TOTAL ENERGY\s+([-\d.]+)', log)
-    if match:
-        energy = float(match.group(1))
-
-    opt_path = os.path.join(tmpdir, 'xtbopt.xyz')
-    opt_xyz = open(opt_path).read() if os.path.exists(opt_path) else ''
-
-    return log, opt_xyz, energy
-
 # --- Klasy widoków ---
 
 class BlogListView(FormMixin, ListView):
@@ -137,7 +116,9 @@ def smiles_to_xyz(smiles, tmpdir):
 def run_xtb(xyz_content, tmpdir):
     """Uruchamia xtb --opt --gfn2, zwraca (log, opt_xyz, energy)."""
     # Zapisz startowy plik jeśli nie istnieje
-    with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
+    xyz_file=os.path.join(tmpdir, 'start.xyz')
+    if not os.path.exists(xyz_file):
+      with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
         f.write(xyz_content)
 
     result = subprocess.run(
