@@ -1,13 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-<form method="POST" enctype="multipart/form-data" >
-         <fieldset class="inlineLabels">
-                 {% csrf_token %}
-                 <table style="width:100%">
-                 {{ form.as_table }}
-                 </table>
-<button type="submit" class="save btn btn-default">Save & submit</button>
-</form>
 {% if result_data %}
 <hr>
   <!-- Podgląd 3D — tylko gdy podano SMILES (nie plik) -->

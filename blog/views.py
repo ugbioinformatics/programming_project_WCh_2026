@@ -62,9 +62,9 @@ def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
 
     return result.stdout
 
-def xyz_to_mol2_xtbopt(tmpdir):
+def xyz_to_mol2(tmpdir,xyz,mol2):
     result = subprocess.run(
-        ['/usr/bin/obabel', '-ixyz','xtbopt.xyz', '-omol2', '-Oxtbopt.mol2'],
+        ['/usr/bin/obabel', '-ixyz',xyz, '-omol2', '-O'+mol2],
         capture_output=True,
         text=True,
         cwd=tmpdir,
@@ -80,27 +80,6 @@ def xyz_to_mol2_xtbopt(tmpdir):
 
 XTB_BIN = '/big/appl/xtb-dist/bin/xtb'
 
-def run_xtb(tmpdir: str):
-    result = subprocess.run(
-        [XTB_BIN, 'start.xyz', '--opt', '--gfn2'],
-        capture_output=True,
-        text=True,
-        cwd=tmpdir,
-        timeout=300
-    )
-
-    log = result.stdout + result.stderr
-
-    energy = None
-    match = re.search(r'TOTAL ENERGY\s+([-\d.]+)', log)
-    if match:
-        energy = float(match.group(1))
-
-    opt_path = os.path.join(tmpdir, 'xtbopt.xyz')
-    opt_xyz = open(opt_path).read() if os.path.exists(opt_path) else ''
-
-    return log, opt_xyz, energy
-
 # --- Klasy widoków ---
 
 class BlogListView(FormMixin, ListView):
@@ -108,15 +87,9 @@ class BlogListView(FormMixin, ListView):
     template_name = "home.html"
     form_class = Suma
 
-
 class BlogDetailView(DetailView): 
     model = Post
     template_name = "post_detail.html"
-
-class BlogCreateView(CreateView):
-    model = Post
-    template_name = "post_new.html"
-    fields = ["title", "author", "body"]
 
 class BlogDeleteView(DeleteView):
     model = Post
@@ -143,7 +116,9 @@ def smiles_to_xyz(smiles, tmpdir):
 def run_xtb(xyz_content, tmpdir):
     """Uruchamia xtb --opt --gfn2, zwraca (log, opt_xyz, energy)."""
     # Zapisz startowy plik jeśli nie istnieje
-    with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
+    xyz_file=os.path.join(tmpdir, 'start.xyz')
+    if not os.path.exists(xyz_file):
+      with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
         f.write(xyz_content)
 
     result = subprocess.run(
@@ -204,12 +179,10 @@ def suma(request):
     current_post_id = None
 
     if request.method == 'POST':
-
-        form = Suma(request.POST,request.FILES)
-
-
         form = Suma(request.POST, request.FILES)
-        if form.is_valid():
+        if not form.is_valid():
+            return render(request, 'bad_input.html', {'form': form})
+        else:
             smiles   = form.cleaned_data["smiles"]
             plik1    = form.cleaned_data["plik"]
             do_hess  = bool(form.cleaned_data.get("do_hess", False))
@@ -231,13 +204,14 @@ def suma(request):
                     post.plik1 = plik1
                     post.save()
                     xyz_content = plik1.read().decode('utf-8')
-                    with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
-                        f.write(xyz_content)
+#                    with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
+#                        f.write(xyz_content)
                 else:
                     submitted_smiles = smiles
                     xyz_content = smiles_to_xyz(smiles, tmpdir)
 
                 log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
+                xyz_to_mol2(tmpdir,'xtbopt.xyz','xtbopt.mol2')
 
                 opt_ok = bool(opt_xyz)
                 result_data = {
