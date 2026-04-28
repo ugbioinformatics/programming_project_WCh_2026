@@ -50,7 +50,7 @@ def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
 
 def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
     result = subprocess.run(
-        ['/usr/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d','-Ostart.xyz'],
+        ['/Users/dorota/anaconda3/envs/django_env/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d','-Ostart.xyz'],
         capture_output=True,
         text=True,
         cwd=tmpdir,
@@ -64,7 +64,7 @@ def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
 
 def xyz_to_mol2(tmpdir,xyz,mol2):
     result = subprocess.run(
-        ['/usr/bin/obabel', '-ixyz',xyz, '-omol2', '-O'+mol2],
+        ['/Users/dorota/anaconda3/envs/django_env/bin/obabel', '-ixyz',xyz, '-omol2', '-O'+mol2],
         capture_output=True,
         text=True,
         cwd=tmpdir,
@@ -78,7 +78,7 @@ def xyz_to_mol2(tmpdir,xyz,mol2):
 
 
 
-XTB_BIN = '/big/appl/xtb-dist/bin/xtb'
+XTB_BIN = '/Users/dorota/anaconda3/envs/django_env/bin/xtb'
 
 # --- Klasy widoków ---
 
@@ -101,7 +101,7 @@ class BlogDeleteView(DeleteView):
 def smiles_to_xyz(smiles, tmpdir):
     """Konwersja SMILES → XYZ przez openbabel."""
     result = subprocess.run(
-        ['/usr/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d', '-Ostart.xyz'],
+        ['/Users/dorota/anaconda3/envs/django_env/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d', '-Ostart.xyz'],
         capture_output=True, text=True, timeout=30,
         cwd=tmpdir
     )
