@@ -71,7 +71,20 @@ def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
 
 def smiles_to_xyz(smiles, tmpdir):
     return smiles_to_xyz_obabel(smiles, tmpdir)
+    
+def xyz_to_mol2(tmpdir,xyz,mol2):
+    result = subprocess.run(
+        ['/usr/bin/obabel', '-ixyz',xyz, '-omol2', '-O'+mol2],
+        capture_output=True,
+        text=True,
+        cwd=tmpdir,
+        timeout=30
+    )
 
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr)
+
+    return result.stdout
 
 def smiles_to_2d_svg(smiles: str) -> str:
     mol = Chem.MolFromSmiles(smiles)
@@ -91,20 +104,20 @@ def smiles_to_2d_svg(smiles: str) -> str:
 XTB_BIN = '/usr/bin/xtb'
 
 
-def run_xtb(xyz_content, tmpdir):
-    xyz_path = os.path.join(tmpdir, "start.xyz")
 
-    with open(xyz_path, "w") as f:
+def run_xtb(xyz_content, tmpdir):
+    """Uruchamia xtb --opt --gfn2, zwraca (log, opt_xyz, energy)."""
+    # Zapisz startowy plik jeśli nie istnieje
+    xyz_file=os.path.join(tmpdir, 'start.xyz')
+    if not os.path.exists(xyz_file):
+      with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
         f.write(xyz_content)
 
     result = subprocess.run(
         [XTB_BIN, 'start.xyz', '--opt', '--gfn2'],
-        capture_output=True,
-        text=True,
-        cwd=tmpdir,
-        timeout=300
+        capture_output=True, text=True,
+        cwd=tmpdir, timeout=300
     )
-
     log = result.stdout + result.stderr
 
     energy = None
@@ -116,8 +129,6 @@ def run_xtb(xyz_content, tmpdir):
     opt_xyz = open(opt_path).read() if os.path.exists(opt_path) else ''
 
     return log, opt_xyz, energy
-
-
 
 def run_hess(tmpdir):
     xtbopt_path = os.path.join(tmpdir, 'xtbopt.xyz')
