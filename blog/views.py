@@ -17,9 +17,7 @@ from .models import Post, XTBCalculation
 from .forms import Suma, XTBInputForm
 
 
-# ======================
-# COMMON
-# ======================
+
 
 def runProcess(command, cwd=None, timeout=120):
     try:
@@ -35,9 +33,6 @@ def runProcess(command, cwd=None, timeout=120):
         return False, "", f"timeout expired: {timeout}"
 
 
-# ======================
-# SMILES CONVERSION
-# ======================
 
 def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
     mol = Chem.MolFromSmiles(smiles)
@@ -90,9 +85,7 @@ def smiles_to_2d_svg(smiles: str) -> str:
     return drawer.GetDrawingText()
 
 
-# ======================
-# XTB
-# ======================
+
 
 XTB_BIN = '/usr/bin/xtb'
 
@@ -160,9 +153,7 @@ def run_hess(tmpdir):
     }
 
 
-# ======================
-# CLASS VIEWS
-# ======================
+
 
 class BlogListView(FormMixin, ListView):
     model = Post
@@ -187,9 +178,7 @@ class BlogCreateView(CreateView):
     fields = ["title", "author", "body"]
 
 
-# ======================
-# MAIN VIEW
-# ======================
+
 
 def suma(request):
     result_data = None
@@ -262,9 +251,6 @@ def suma(request):
     })
 
 
-# ======================
-# DOWNLOAD
-# ======================
 
 def download_g98(request, post_id):
     file_path = os.path.join(settings.MEDIA_ROOT, str(post_id), 'g98.out')
@@ -275,9 +261,6 @@ def download_g98(request, post_id):
     raise Http404("Plik g98.out nie istnieje.")
 
 
-# ======================
-# API
-# ======================
 
 def smiles3de(request):
     smiles = request.GET.get('smiles')
