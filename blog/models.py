@@ -3,7 +3,7 @@ from django.urls import reverse
 
 def user_directory_path(instance, filename):
      # file will be uploaded to MEDIA_ROOT/<id>/plik.pdb
-      return '{0}/{1}'.format(instance.id, 'plik.txt')
+      return '{0}/{1}'.format(instance.id, 'start.xyz')
 
 class Post(models.Model):
     title = models.CharField(max_length=200)
