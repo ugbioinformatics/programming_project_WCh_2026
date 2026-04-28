@@ -206,8 +206,8 @@ def suma(request):
                     post.plik1 = plik1
                     post.save()
                     xyz_content = plik1.read().decode('utf-8')
-                    with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
-                        f.write(xyz_content)
+#                    with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
+#                        f.write(xyz_content)
                 else:
                     submitted_smiles = smiles
                     xyz_content = smiles_to_xyz(smiles, tmpdir)
