@@ -246,6 +246,14 @@ def suma(request):
                     'log': log,
                     'status': 'done' if opt_ok else 'error',
                 }
+                
+                post.input_xyz = xyz_content
+                post.output_log = log
+                post.optimized_xyz = opt_xyz
+                post.energy = energy
+                post.status = 'done'
+                
+                post.save()
 
                 if do_hess and opt_ok:
                     hess_data = run_hess(tmpdir)
