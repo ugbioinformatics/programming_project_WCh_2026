@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import BlogListView,BlogDetailView,BlogCreateView,suma,BlogDeleteView,smiles3de,smiles_page
+from .views import BlogListView,BlogDetailView,suma,BlogDeleteView,smiles3de,smiles_page
 from . import views
 
 

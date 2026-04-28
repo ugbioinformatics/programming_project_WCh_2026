@@ -62,9 +62,9 @@ def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
 
     return result.stdout
 
-def xyz_to_mol2_xtbopt(tmpdir):
+def xyz_to_mol2(tmpdir,xyz,mol2):
     result = subprocess.run(
-        ['/usr/bin/obabel', '-ixyz','xtbopt.xyz', '-omol2', '-Oxtbopt.mol2'],
+        ['/usr/bin/obabel', '-ixyz',xyz, '-omol2', '-O'+mol2],
         capture_output=True,
         text=True,
         cwd=tmpdir,
@@ -108,15 +108,9 @@ class BlogListView(FormMixin, ListView):
     template_name = "home.html"
     form_class = Suma
 
-
 class BlogDetailView(DetailView): 
     model = Post
     template_name = "post_detail.html"
-
-class BlogCreateView(CreateView):
-    model = Post
-    template_name = "post_new.html"
-    fields = ["title", "author", "body"]
 
 class BlogDeleteView(DeleteView):
     model = Post
@@ -238,6 +232,7 @@ def suma(request):
                     xyz_content = smiles_to_xyz(smiles, tmpdir)
 
                 log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
+                xyz_to_mol2(tmpdir,'xtbopt.xyz','xtbopt.mol2')
 
                 opt_ok = bool(opt_xyz)
                 result_data = {
