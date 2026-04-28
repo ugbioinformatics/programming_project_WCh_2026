@@ -204,12 +204,10 @@ def suma(request):
     current_post_id = None
 
     if request.method == 'POST':
-
-        form = Suma(request.POST,request.FILES)
-
-
         form = Suma(request.POST, request.FILES)
-        if form.is_valid():
+        if not form.is_valid():
+            return render(request, 'bad_input.html', {'form': form})
+        else:
             smiles   = form.cleaned_data["smiles"]
             plik1    = form.cleaned_data["plik"]
             do_hess  = bool(form.cleaned_data.get("do_hess", False))
