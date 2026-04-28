@@ -231,6 +231,7 @@ def suma(request):
                 svg_2d = smiles_to_2d_svg(smiles)
 
             log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
+            xyz_to_mol2(tmpdir,'xtbopt.xyz','xtbopt.mol2')
 
             result_data = {
                 'energy': energy,
