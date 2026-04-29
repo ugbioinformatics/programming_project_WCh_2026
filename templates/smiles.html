@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SMILES 3D Viewer</title>
+    <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+</head>
+<body>
+    <h2>Wprowadź SMILES:</h2>
+
+    <form id="smilesForm">
+        <input type="text" id="smilesInput" placeholder="Np. C1=CC=CC=C1" style="width:300px;">
+        <button type="submit">Pokaż 3D</button>
+    </form>
+
+    <div id="viewer" style="width: 500px; height: 500px; margin-top:200px;"></div>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const apiUrl = "{% url 'smiles3de' %}";
+        const form = document.getElementById("smilesForm");
+        const input = document.getElementById("smilesInput");
+        const viewerDiv = document.getElementById("viewer");
+
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const smiles = input.value.trim();
+            if (!smiles) {
+                alert("Wpisz SMILES!");
+                return;
+            }
+
+            fetch(apiUrl + "?smiles=" + encodeURIComponent(smiles))
+                .then(res => res.json())
+                .then(data => {
+                    console.log(data);
+
+                    if (data.error) {
+                        alert("Błąd: " + data.error);
+                        return;
+                    }
+
+                    viewerDiv.innerHTML = "";
+
+                    const viewer = $3Dmol.createViewer(viewerDiv, {
+                        backgroundColor: "white"
+                    });
+
+
+                    viewer.addModel(data.mol_block, "mol");
+
+                    viewer.setStyle({}, {
+                        stick: {},
+                        sphere: { scale: 0.3 }
+                    });
+
+                    viewer.zoomTo();
+                    viewer.render();
+                })
+                .catch(err => {
+                    alert("Błąd połączenia: " + err);
+                });
+        });
+    });
+    </script>
+</body>
+</html>

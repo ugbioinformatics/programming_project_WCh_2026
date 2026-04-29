@@ -1,4 +1,3 @@
-# programming_project_WCh_2026
 
 do wykonania
 
@@ -11,11 +10,19 @@ do wykonania
    <pre>
      /usr/bin/obabel -:'CC(=O)CC' --gen3d -oxyz -Ostart.xyz
    </pre>
-6. uruchomienie z python dowolnego skryptu przez subprocess
+6. (Olek)uruchomienie z python dowolnego skryptu przez subprocess
 7. (Maciej) skrypt do obliczeń obliczeń xtb dla zadanego pliku lub wygenerowanego ze smiles 
    <pre>
      /big/appl/xtb-dist/bin/xtb start.xyz --opt --gfn2
    </pre>
+8. (Martyna) singnals.py z https://github.com/ugbioinformatics/programming_project_WCh_2025/blob/main/mopac_portal/blog/signals.py
+   dla kasowanie plików wraz z kasowanie wpisu do bazy danych
+9. (DOROTa) http://127.0.0.1:8000/xtb/ przenieść do strony głownej
+10. (Olek)opacje konwersji obabel albo rdkit na stronie głownej
+11. wpisy wybranych (energia) wynikow do bazy danych razem z ich wyświetlaniem
+12. naprawić obliczenia startujące z pliku xyz
+   
+
    
 pierwsze uruchomienie
 <pre>
@@ -29,13 +36,16 @@ source ~/env/bin/activate.csh
 </pre>
 
 tworzenie nowej gałęzi i merge do niej gałęzi test
+
 <pre>
 git switch -c test_test
 git merge origin/test
 git push -u origin test_test
 </pre>
 
+
 sprawdzamy gałęzie na github i lokalnie
 <pre>
 git remote show origin
 </pre>
+
