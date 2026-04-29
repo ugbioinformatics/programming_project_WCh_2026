@@ -322,10 +322,7 @@ def run_hess(tmpdir):
         return frames
 
     def frame_to_mol2(xyz_str, cwd):
-        r = subprocess.run(
-            ["/usr/bin/obabel", "-ixyz", "-", "-omol2"],
-            input=xyz_str, capture_output=True, text=True, cwd=cwd
-        )
+        r = subprocess.run(["/usr/bin/obabel", "-ixyz", "-", "-omol2"],input=xyz_str, capture_output=True, text=True, cwd=cwd)
         return r.stdout
 
 
@@ -341,10 +338,7 @@ def run_hess(tmpdir):
         mol2_content = "".join(frame_to_mol2(f, tmpdir) for f in frames)
         with open(vib_mol2, 'w') as fh:
             fh.write(mol2_content)
-
-
-        if os.path.exists(vib_mol2):
-            mol2_files.append(vib_mol2)
+        mol2_files.append(vib_mol2)
 
     return {
         'frequencies': freqs,
