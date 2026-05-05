@@ -170,39 +170,46 @@ def read_vibspectrum(tmpdir):
 def run_hess(tmpdir):
     xtbopt_path = os.path.join(tmpdir, 'xtbopt.xyz')
     if not os.path.exists(xtbopt_path):
-        raise RuntimeError("Brak pliku xtbopt.xyz — optymalizacja nie powiodła się.")
+        raise RuntimeError("Brak xtbopt.xyz")
 
     result = subprocess.run(
-        [XTB_BIN, 'xtbopt.xyz', '--hess'],
+        [XTB_BIN, 'xtbopt.xyz', '--hess', '--g98'],
+        cwd=tmpdir,
         capture_output=True,
         text=True,
-        cwd=tmpdir,
         timeout=300
     )
 
-    hess_log = result.stdout + result.stderr
+    log = result.stdout + result.stderr
 
-    frequencies = []
+    with open(os.path.join(tmpdir, "hess.log"), "w") as f:
+        f.write(log)
+
     g98_path = os.path.join(tmpdir, 'g98.out')
 
+    frequencies = []
     if os.path.exists(g98_path):
         with open(g98_path) as f:
             for line in f:
-                if 'Frequencies --' in line:
-                    parts = line.split('--')[1].split()
-                    for p in parts:
-                        try:
-                            frequencies.append(float(p))
-                        except ValueError:
-                            pass
-                            
-    vib = read_vibspectrum(tmpdir)  
+                if "Frequencies --" in line:
+                    freqs = [float(x) for x in line.split()[2:]]
+                    frequencies.extend(freqs)
+    else:
+        for line in log.splitlines():
+            if "eigval :" in line:
+                try:
+                    freqs = [float(x) for x in line.split()[2:]]
+                    frequencies.extend(freqs)
+                except ValueError:
+                    pass
 
     return {
-        'frequencies': frequencies,
+        "frequencies": frequencies,
+        "has_imaginary": any(f < 0 for f in frequencies),
+        "log": log,
+        "g98_exists": os.path.exists(g98_path),
+        'vibspectrum': vib,
         'hess_log': hess_log,
-        'g98_exists': os.path.exists(g98_path),
-        'vibspectrum': vib
     }
 
     def get_symbol(n):
@@ -399,6 +406,7 @@ class BlogDetailView(DetailView):
     model = Post
     template_name = "post_detail.html"
 
+<<<<<<< HEAD
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -411,6 +419,8 @@ class BlogDetailView(DetailView):
 
         return context
 
+=======
+>>>>>>> origin/martyna1
 
 class BlogDeleteView(DeleteView):
     model = Post
@@ -440,7 +450,11 @@ def suma(request):
 
         smiles = form.cleaned_data["smiles"]
         plik1 = form.cleaned_data["plik"]
+<<<<<<< HEAD
         do_hess = bool(form.cleaned_data.get("do_hess", False))
+=======
+        do_hess = form.cleaned_data.get("do_hess") == True
+>>>>>>> origin/martyna1
 
         post = Post(smiles=smiles, title='SMILES' if smiles else 'Plik XYZ', author="test")
         post.save()
@@ -451,6 +465,7 @@ def suma(request):
 
         try:
             if plik1:
+<<<<<<< HEAD
                 xyz_content = plik1.read().decode('utf-8')
                 post.plik1 = plik1
                 post.save()
@@ -470,6 +485,23 @@ def suma(request):
 
             log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
             xyz_to_mol2(tmpdir, 'xtbopt.xyz', 'xtbopt.mol2')
+=======
+                post.plik1 = plik1
+                post.save()
+
+                xyz_content = plik1.read().decode('utf-8')
+
+                with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
+                    f.write(xyz_content)
+
+            else:
+                submitted_smiles = smiles
+                xyz_content = smiles_to_xyz(smiles, tmpdir)
+                svg_2d = smiles_to_2d_svg(smiles)
+
+            log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
+            xyz_to_mol2(tmpdir,'xtbopt.xyz','xtbopt.mol2')
+>>>>>>> origin/martyna1
 
             result_data = {
                 'energy': energy,
@@ -485,6 +517,7 @@ def suma(request):
             post.energy = energy
             post.status = 'done' if opt_xyz else 'error'
             post.save()
+<<<<<<< HEAD
 
             if do_hess and opt_xyz:
                 hess_data = run_hess(tmpdir)
@@ -492,6 +525,24 @@ def suma(request):
 
         except Exception as e:
             result_data = {'status': 'error', 'log': str(e)}
+=======
+            
+
+            if do_hess and opt_xyz:
+                hess_data = run_hess(tmpdir)
+                
+                post.frequencies = hess_data.get("frequencies", [])
+                post.hessian_log = hess_data.get("log", "")
+                post.has_imaginary = hess_data.get("has_imaginary", False)
+                post.save()
+                
+        except Exception as e:
+            err_msg = str(e)
+            if result_data is None:
+                result_data = {'status': 'error', 'log': err_msg}
+            else:
+                hess_data = {"error": err_msg}
+>>>>>>> origin/martyna1
 
     else:
         form = Suma()

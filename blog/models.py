@@ -21,6 +21,9 @@ class Post(models.Model):
     optimized_xyz = models.TextField(blank=True, default='')   # xtbopt.xyz po obliczeniach
     energy = models.FloatField(null=True, blank=True, default=0)  # energia wyciągnięta z logu
     status = models.CharField(max_length=20, default='pending')  # pending/done/error
+    frequencies = models.JSONField(blank=True, null=True)
+    hessian_log = models.TextField(blank=True, null=True)
+    has_imaginary = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
