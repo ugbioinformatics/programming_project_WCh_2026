@@ -407,7 +407,6 @@ class BlogDetailView(DetailView):
     model = Post
     template_name = "post_detail.html"
 
-<<<<<<< HEAD
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -420,8 +419,6 @@ class BlogDetailView(DetailView):
 
         return context
 
-=======
->>>>>>> origin/martyna1
 
 class BlogDeleteView(DeleteView):
     model = Post
