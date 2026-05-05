@@ -465,11 +465,7 @@ def suma(request):
 
         smiles = form.cleaned_data["smiles"]
         plik1 = form.cleaned_data["plik"]
-<<<<<<< HEAD
-        do_hess = bool(form.cleaned_data.get("do_hess", False))
-=======
         do_hess = form.cleaned_data.get("do_hess") == True
->>>>>>> origin/martyna1
 
         molecule_name = get_molecule_name(smiles) if smiles else 'Plik XYZ'
         post = Post(smiles=smiles, title=molecule_name, author="test")
@@ -481,31 +477,7 @@ def suma(request):
 
         try:
             if plik1:
-<<<<<<< HEAD
-                xyz_content = plik1.read().decode('utf-8')
-                post.plik1 = plik1
-                post.save()
-                
-                smiles_from_xyz = xyz_to_smiles(xyz_content, tmpdir)          
-                molecule_name = get_molecule_name(smiles_from_xyz) if smiles_from_xyz else     'Nieznana cząsteczka'  
-                post.title = molecule_name                                    
-                post.save()                                                    
 
-            else:
-                submitted_smiles = smiles
-                molecule_name = get_molecule_name(smiles)
-                engine = form.cleaned_data.get('engine', 'obabel')
-
-                if engine == 'rdkit':
-                    xyz_content = smiles_to_xyz_rdkit(smiles, tmpdir)
-                else:
-                    xyz_content = smiles_to_xyz_obabel(smiles, tmpdir)
-
-                svg_2d = smiles_to_2d_svg(smiles)
-
-            log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
-            xyz_to_mol2(tmpdir, 'xtbopt.xyz', 'xtbopt.mol2')
-=======
                 post.plik1 = plik1
                 post.save()
 
@@ -521,7 +493,6 @@ def suma(request):
 
             log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
             xyz_to_mol2(tmpdir,'xtbopt.xyz','xtbopt.mol2')
->>>>>>> origin/martyna1
 
             result_data = {
                 'energy': energy,
@@ -537,15 +508,6 @@ def suma(request):
             post.energy = energy
             post.status = 'done' if opt_xyz else 'error'
             post.save()
-<<<<<<< HEAD
-
-            if do_hess and opt_xyz:
-                hess_data = run_hess(tmpdir)
-                hess_data['has_imaginary'] = any(f < 0 for f in hess_data['frequencies'])
-
-        except Exception as e:
-            result_data = {'status': 'error', 'log': str(e)}
-=======
             
 
             if do_hess and opt_xyz:
@@ -562,7 +524,6 @@ def suma(request):
                 result_data = {'status': 'error', 'log': err_msg}
             else:
                 hess_data = {"error": err_msg}
->>>>>>> origin/martyna1
 
     else:
         form = Suma()
