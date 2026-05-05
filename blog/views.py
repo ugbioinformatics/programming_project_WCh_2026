@@ -1,6 +1,7 @@
 import subprocess
 import os
 import re
+import requests
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, FileResponse, Http404
@@ -433,12 +434,29 @@ class BlogCreateView(CreateView):
     template_name = "post_new.html"
     fields = ["title", "author", "body"]
 
+def xyz_to_smiles(xyz_content: str, tmpdir: str) -> str:
+    """Konwertuje XYZ do SMILES przez OpenBabel."""
+    xyz_path = os.path.join(tmpdir, 'start.xyz')
+    with open(xyz_path, 'w') as f:
+        f.write(xyz_content)
+
+    result = subprocess.run(
+        ['/usr/bin/obabel', '-ixyz', xyz_path, '-osmi'],
+        capture_output=True, text=True, timeout=15
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+
+    # obabel zwraca "SMILES  nazwa\n" — bierzemy tylko pierwszą kolumnę
+    smiles = result.stdout.strip().split()[0]
+    return smiles
 
 
 def suma(request):
     result_data = None
     hess_data = None
     submitted_smiles = None
+    molecule_name = None
     current_post_id = None
     svg_2d = None
 
@@ -456,7 +474,8 @@ def suma(request):
         do_hess = form.cleaned_data.get("do_hess") == True
 >>>>>>> origin/martyna1
 
-        post = Post(smiles=smiles, title='SMILES' if smiles else 'Plik XYZ', author="test")
+        molecule_name = get_molecule_name(smiles) if smiles else 'Plik XYZ'
+        post = Post(smiles=smiles, title=molecule_name, author="test")
         post.save()
 
         current_post_id = post.id
@@ -469,11 +488,15 @@ def suma(request):
                 xyz_content = plik1.read().decode('utf-8')
                 post.plik1 = plik1
                 post.save()
+                
+                smiles_from_xyz = xyz_to_smiles(xyz_content, tmpdir)          
+                molecule_name = get_molecule_name(smiles_from_xyz) if smiles_from_xyz else     'Nieznana cząsteczka'  
+                post.title = molecule_name                                    
+                post.save()                                                    
 
-                with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
-                    f.write(xyz_content)
             else:
                 submitted_smiles = smiles
+                molecule_name = get_molecule_name(smiles)
                 engine = form.cleaned_data.get('engine', 'obabel')
 
                 if engine == 'rdkit':
@@ -554,6 +577,7 @@ def suma(request):
         'result_data': result_data,
         'hess_data': hess_data,
         'submitted_smiles': submitted_smiles,
+        'molecule_name': molecule_name,   # ← nowe
         'post_list': post_list,
         'post_id': current_post_id,
     })
@@ -657,3 +681,18 @@ def xtb_calc_view(request):
             calc.save()
 
     return render(request, 'xtb_calc.html', {'form': form, 'calc': calc})
+
+def get_molecule_name(smiles: str) -> str:
+    """Pobiera nazwę cząsteczki z PubChem na podstawie SMILES."""
+    try:
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{requests.utils.quote(smiles)}/property/IUPACName,Title/JSON"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            props = data['PropertyTable']['Properties'][0]
+            # Title to potoczna nazwa (np. "aspirin"), IUPACName to systematyczna
+            return props.get('Title') or props.get('IUPACName') or smiles
+    except Exception:
+        pass
+    return smiles  # fallback: zwróć SMILES jeśli coś pójdzie nie tak
+    

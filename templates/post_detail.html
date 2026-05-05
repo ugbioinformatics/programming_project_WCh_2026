@@ -1,5 +1,11 @@
 {% block content %}
 
+{% if molecule_name %}
+<div style="margin: 15px 0; padding: 12px 20px; background: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;">
+  <h2 style="margin: 0; color: #1565C0;">{{ molecule_name }}</h2>
+</div>
+{% endif %}
+
 <div class="post-entry">
 
   {% if post.smiles %}
