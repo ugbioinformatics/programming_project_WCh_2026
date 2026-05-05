@@ -398,8 +398,6 @@ def suma(request):
                 post.plik1 = plik1
                 post.save()
 
-                with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
-                    f.write(xyz_content)
             else:
                 submitted_smiles = smiles
                 engine = form.cleaned_data.get('engine', 'obabel')
