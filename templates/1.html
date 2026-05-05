@@ -1,0 +1,15 @@
+<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var stage = new NGL.Stage("viewport");
+      stage.loadFile( "/PLIKI/{{post.id}}/vibrations/vib_1.mol2", {
+      defaultRepresentation: true, asTrajectory: true } ) .then( function( o ){
+      var traj = o.trajList[0].trajectory;
+      var player = new NGL.TrajectoryPlayer( traj, { } );
+      traj.setPlayer( player );
+      traj.player.play();
+      stage.centerView();
+     });
+    });
+  </script>
+  <div id="viewport" style="width:400px; height:300px;"></div>
