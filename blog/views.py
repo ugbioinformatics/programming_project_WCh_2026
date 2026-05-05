@@ -101,7 +101,7 @@ def smiles_to_2d_svg(smiles: str) -> str:
 
 
 
-XTB_BIN = '/usr/bin/xtb'
+XTB_BIN = '/big/appl/xtb-dist/bin/xtb'
 
 
 
@@ -451,21 +451,25 @@ def suma(request):
 
         try:
             if plik1:
+                xyz_content = plik1.read().decode('utf-8')
                 post.plik1 = plik1
                 post.save()
 
-                xyz_content = plik1.read().decode('utf-8')
-
                 with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
                     f.write(xyz_content)
-
             else:
                 submitted_smiles = smiles
-                xyz_content = smiles_to_xyz(smiles, tmpdir)
+                engine = form.cleaned_data.get('engine', 'obabel')
+
+                if engine == 'rdkit':
+                    xyz_content = smiles_to_xyz_rdkit(smiles, tmpdir)
+                else:
+                    xyz_content = smiles_to_xyz_obabel(smiles, tmpdir)
+
                 svg_2d = smiles_to_2d_svg(smiles)
 
             log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
-            xyz_to_mol2(tmpdir,'xtbopt.xyz','xtbopt.mol2')
+            xyz_to_mol2(tmpdir, 'xtbopt.xyz', 'xtbopt.mol2')
 
             result_data = {
                 'energy': energy,
