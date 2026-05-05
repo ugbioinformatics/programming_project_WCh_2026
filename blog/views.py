@@ -5,6 +5,7 @@ import requests
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, FileResponse, Http404
+from django.views import View
 from django.views.generic import ListView, DetailView, DeleteView
 from django.views.generic.edit import CreateView, FormMixin
 from django.urls import reverse_lazy
@@ -463,6 +464,17 @@ class BlogCreateView(CreateView):
     model = Post
     template_name = "post_new.html"
     fields = ["title", "author", "body"]
+
+class DeleteAll(View):
+    template_name = "post_delete.html"
+
+    def get(self,request):
+        count = Post.objects.count()
+        return render(request, self.template_name, {"all": True, "count": count})
+    def post(self, request):
+        Post.objects.all().delete()
+        return redirect('home')
+
 
 def xyz_to_smiles(xyz_content: str, tmpdir: str) -> str:
     """Konwertuje XYZ do SMILES przez OpenBabel."""
