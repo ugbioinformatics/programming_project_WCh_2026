@@ -318,6 +318,39 @@ def run_hess(tmpdir):
             frames.append("".join(lines))
         return frames
 
+    def generate_links_vibspec(input_dir, vib_dir):
+        #os.makedirs("htmls")
+        with open(f"{input_dir}", 'r') as f:
+            content = f.read().splitlines()[9:]
+            with open(f'{vib_dir}/link_list.html', 'w') as t:
+                t.write("<pre>")
+                print(content)
+                for i, line in enumerate(content,start=0):
+                    if line == "$end":
+                        continue
+                    t.write(f'<a href="{i}.html">{line}</a><br>\n')
+                    with open(f"{vib_dir}/{i}.html", 'w') as d:
+                        text = """<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var stage = new NGL.Stage("viewport");
+      stage.loadFile( "placeholder", {
+      defaultRepresentation: true, asTrajectory: true } ) .then( function( o ){
+      var traj = o.trajList[0].trajectory;
+      var player = new NGL.TrajectoryPlayer( traj, { } );
+      traj.setPlayer( player );
+      traj.player.play();
+      stage.centerView();
+     });
+    });
+  </script>
+  <div id="viewport" style="width:400px; height:300px;"></div>"""
+                        if "placeholder" in text:
+                            new_text = text.replace("placeholder", f"vib_{i}.mol2")
+                        d.write(new_text)
+                t.write("</pre>")
+
+
     freqs, modes, syms = parse_xtb(g98_path)
     xyz, elem = load_xtb_xyz(g98_path)
 
@@ -335,12 +368,16 @@ def run_hess(tmpdir):
         if os.path.exists(vib_mol2):
             mol2_files.append(vib_mol2)
 
+    index_path = generate_links_vibspec(f"{tmpdir}/vibspectrum", vib_dir)
 
     return {
         'frequencies': frequencies,
         'hess_log': hess_log,
         'g98_exists': os.path.exists(g98_path),
+        'vibration_index': index_path,
+        'vibration_dir': vib_dir,
     }
+
 
 
 
