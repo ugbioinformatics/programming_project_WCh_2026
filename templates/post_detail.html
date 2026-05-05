@@ -1,4 +1,3 @@
-{% extends "base.html" %}
 {% block content %}
 
 <div class="post-entry">
@@ -122,7 +121,9 @@
     });
   </script>
   <div id="viewport" style="width:400px; height:300px;"></div>
-  
+<p>{{ post.energy }}</p>  
+<pre>{{ post.optimized_xyz }}</pre>
+<pre>{{post.frequencies}}</pre>
   <p><a href="{% url 'post_delete' post.pk %}">+ Delete Blog Post</a></p>
 
 </div>

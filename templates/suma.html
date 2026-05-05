@@ -1,57 +1,79 @@
 {% extends "base.html" %}
 {% block content %}
-<form method="POST" enctype="multipart/form-data" >
-         <fieldset class="inlineLabels">
-                 {% csrf_token %}
-                 <table style="width:100%">
-                 {{ form.as_table }}
-                 </table>
-<button type="submit" class="save btn btn-default">Save & submit</button>
-</form>
+
+{% if submitted_smiles %}
+<div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+  <h3>Struktura 3D: {{ submitted_smiles }}</h3>
+
+  <p id="loading3d">Ładowanie struktury 3D...</p>
+  <p id="smilesError" style="color:red;"></p>
+
+  <div id="smilesViewer" style="width:600px; height:400px; position:relative;"></div>
+</div>
+
+{{ submitted_smiles|json_script:"smiles-data" }}
+
+<script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const loading  = document.getElementById("loading3d");
+  const errorBox = document.getElementById("smilesError");
+  const viewerDiv = document.getElementById("smilesViewer");
+
+  const smiles = JSON.parse(document.getElementById("smiles-data").textContent);
+  const url = "{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles);
+
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    loading.style.display = "none";
+
+    if (data.error) {
+      errorBox.textContent = data.error;
+      return;
+    }
+
+    const viewer = $3Dmol.createViewer(viewerDiv, { backgroundColor: "white" });
+
+    viewer.addModel(data.mol_block, "mol");
+    viewer.setStyle({}, {
+      stick:  { radius: 0.2, colorscheme: "CPK" },
+      sphere: { scale: 0.28, colorscheme: "CPK" }
+    });
+
+    viewer.zoomTo();
+    viewer.zoom(1.1);
+    viewer.render();
+
+  } catch (err) {
+    loading.style.display = "none";
+    errorBox.textContent = "Błąd: " + err.message;
+  }
+});
+</script>
+{% endif %}
+
+
+{% if result_data.svg_2d %}
+<div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+  <h3>Struktura 2D</h3>
+  <div>
+    {{ result_data.svg_2d|safe }}
+  </div>
+</div>
+{% endif %}
+
+
 {% if result_data %}
 <hr>
-  <!-- Podgląd 3D — tylko gdy podano SMILES (nie plik) -->
-  {% if submitted_smiles %}
-  <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
-    <h3>Cząsteczka: {{ submitted_smiles }}</h3>
-    <p id="loading3d">Ładowanie struktury 3D...</p>
-    <p id="smilesError" style="color:red;"></p>
-    <div id="smilesViewer" style="width:600px; height:400px; position:relative;"></div>
-  </div>
 
-  {{ submitted_smiles|json_script:"smiles-data" }}
-  <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", async () => {
-      const loading  = document.getElementById("loading3d");
-      const errorBox = document.getElementById("smilesError");
-      const viewerDiv = document.getElementById("smilesViewer");
-      const smiles = JSON.parse(document.getElementById("smiles-data").textContent);
-      const url = "{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles);
-
-      try {
-        const res  = await fetch(url);
-        const data = await res.json();
-        loading.style.display = "none";
-        if (data.error) { errorBox.textContent = data.error; return; }
-
-        const viewer = $3Dmol.createViewer(viewerDiv, { backgroundColor: "white" });
-        viewer.addModel(data.mol_block, "mol");
-        viewer.setStyle({}, {
-          stick:  { radius: 0.2, colorscheme: "CPK" },
-          sphere: { scale: 0.28, colorscheme: "CPK" }
-        });
-        viewer.zoomTo(); viewer.zoom(1.1); viewer.render();
-      } catch (err) {
-        loading.style.display = "none";
-        errorBox.textContent = "Błąd: " + err.message;
-      }
-    });
-  </script>
-  {% endif %}
-<hr>
 <h3>
-  {% if result_data.status == 'done' %}✅ Optymalizacja zakończona{% else %}❌ Błąd{% endif %}
+  {% if result_data.status == 'done' %}
+    ✅ Optymalizacja zakończona
+  {% else %}
+    ❌ Błąd
+  {% endif %}
 </h3>
 
 {% if result_data.energy %}
@@ -59,30 +81,32 @@
 {% endif %}
 
 {% if result_data.opt_xyz %}
-  <details>
-    <summary>Zoptymalizowana geometria (xtbopt.xyz)</summary>
-    <pre style="background:#111; color:#eee; padding:10px;">{{ result_data.opt_xyz }}</pre>
-  </details>
+<details>
+  <summary>Zoptymalizowana geometria (xtbopt.xyz)</summary>
+  <pre style="background:#111; color:#eee; padding:10px;">{{ result_data.opt_xyz }}</pre>
+</details>
 {% endif %}
 
 <details>
   <summary>Log optymalizacji</summary>
-  <pre style="font-size:0.75em; max-height:300px; overflow:auto; background:#111; color:#eee; padding:10px;">{{ result_data.log }}</pre>
+  <pre style="font-size:0.75em; max-height:300px; overflow:auto; background:#111; color:#eee; padding:10px;">
+    {{ result_data.log }}
+  </pre>
 </details>
 {% endif %}
+
 
 {% if hess_data %}
 <hr>
 
-
 {% if hess_data.frequencies %}
   <p><strong>Liczba częstotliwości:</strong> {{ hess_data.frequencies|length }}</p>
 
-  
-
   {% for freq in hess_data.frequencies %}
     {% if freq < 0 %}
-      <p style="color:red; margin-top: 10px;">⚠️ Wykryto urojone częstotliwości — struktura może nie być w minimum energii!</p>
+      <p style="color:red; margin-top: 10px;">
+        ⚠️ Wykryto urojone częstotliwości — struktura może nie być w minimum energii!
+      </p>
     {% endif %}
   {% endfor %}
 {% else %}
@@ -91,6 +115,10 @@
 
 <details style="margin-top: 20px;">
   <summary>Log obliczeń Hessiana</summary>
-  <pre style="font-size:0.75em; max-height:300px; overflow:auto; background:#111; color:#eee; padding:10px;">{{ hess_data.hess_log }}</pre>
+  <pre style="font-size:0.75em; max-height:300px; overflow:auto; background:#111; color:#eee; padding:10px;">
+    {{ hess_data.hess_log }}
+  </pre>
 </details>
-{% endif %} {% endblock content %}
+{% endif %}
+
+{% endblock content %}

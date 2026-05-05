@@ -14,6 +14,16 @@ class Post(models.Model):
     author = models.CharField(max_length=20,default='')
     smiles = models.TextField(default='')
     plik1 = models.FileField(default='',upload_to=user_directory_path)
+    created_at = models.DateTimeField(auto_now_add=True)
+    input_type = models.CharField(max_length=10, choices=[('xyz', 'XYZ file'), ('smiles', 'SMILES')], default='SMILES')
+    input_xyz = models.TextField(blank=True, default='')       # zawartość pliku start.xyz
+    output_log = models.TextField(blank=True, default='')      # stdout z xtb
+    optimized_xyz = models.TextField(blank=True, default='')   # xtbopt.xyz po obliczeniach
+    energy = models.FloatField(null=True, blank=True, default=0)  # energia wyciągnięta z logu
+    status = models.CharField(max_length=20, default='pending')  # pending/done/error
+    frequencies = models.JSONField(blank=True, null=True)
+    hessian_log = models.TextField(blank=True, null=True)
+    has_imaginary = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
@@ -33,3 +43,5 @@ class XTBCalculation(models.Model):
 
     def __str__(self):
         return f"XTB #{self.pk} ({self.status}) {self.created_at:%Y-%m-%d %H:%M}"
+        
+        
