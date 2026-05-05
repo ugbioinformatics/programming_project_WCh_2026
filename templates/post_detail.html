@@ -1,5 +1,11 @@
 {% block content %}
 
+{% if molecule_name %}
+<div style="margin: 15px 0; padding: 12px 20px; background: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;">
+  <h2 style="margin: 0; color: #1565C0;">{{ molecule_name }}</h2>
+</div>
+{% endif %}
+
 <div class="post-entry">
 
   {% if post.smiles %}
@@ -117,6 +123,7 @@
   <script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
   <div id="viewport" style="width:400px; height:300px;"></div>
 
+
   <script>
   document.addEventListener("DOMContentLoaded", function () {
     var stage = new NGL.Stage("viewport");
@@ -205,14 +212,16 @@
   {% endif %}
 
 
-  <p>
-    <a href="{% url 'post_delete' post.pk %}">
-      + Delete Blog Post
-    </a>
-  </p>
 
-</div>
+<p>{{ post.energy }}</p>  
+<pre>{{ post.optimized_xyz }}</pre>
+<pre>{{post.frequencies}}</pre>
 
 <p>
 <a href="/PLIKI/{{post.id}}/vibrations/link_list.html"> Częstości </a>
+  <p><a href="{% url 'post_delete' post.pk %}">+ Delete Blog Post</a></p>
+
+
+</div>
+
 {% endblock content %}

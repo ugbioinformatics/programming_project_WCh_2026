@@ -1,6 +1,7 @@
 import subprocess
 import os
 import re
+import requests
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, FileResponse, Http404
@@ -170,33 +171,38 @@ def read_vibspectrum(tmpdir):
 def run_hess(tmpdir):
     xtbopt_path = os.path.join(tmpdir, 'xtbopt.xyz')
     if not os.path.exists(xtbopt_path):
-        raise RuntimeError("Brak pliku xtbopt.xyz — optymalizacja nie powiodła się.")
+        raise RuntimeError("Brak xtbopt.xyz")
 
     result = subprocess.run(
-        [XTB_BIN, 'xtbopt.xyz', '--hess'],
+        [XTB_BIN, 'xtbopt.xyz', '--hess', '--g98'],
+        cwd=tmpdir,
         capture_output=True,
         text=True,
-        cwd=tmpdir,
         timeout=300
     )
 
-    hess_log = result.stdout + result.stderr
+    log = result.stdout + result.stderr
 
-    frequencies = []
+    with open(os.path.join(tmpdir, "hess.log"), "w") as f:
+        f.write(log)
+
     g98_path = os.path.join(tmpdir, 'g98.out')
 
+    frequencies = []
     if os.path.exists(g98_path):
         with open(g98_path) as f:
             for line in f:
-                if 'Frequencies --' in line:
-                    parts = line.split('--')[1].split()
-                    for p in parts:
-                        try:
-                            frequencies.append(float(p))
-                        except ValueError:
-                            pass
-                            
-    vib = read_vibspectrum(tmpdir)  
+                if "Frequencies --" in line:
+                    freqs = [float(x) for x in line.split()[2:]]
+                    frequencies.extend(freqs)
+    else:
+        for line in log.splitlines():
+            if "eigval :" in line:
+                try:
+                    freqs = [float(x) for x in line.split()[2:]]
+                    frequencies.extend(freqs)
+                except ValueError:
+                    pass
 
 
     def get_symbol(n):
@@ -393,7 +399,6 @@ def run_hess(tmpdir):
     freqs, modes, syms = parse_xtb(g98_path)
     xyz, elem = load_xtb_xyz(g98_path)
 
-    print("asasadas")
     vib_dir = os.path.join(tmpdir, "vibrations")
     os.makedirs(vib_dir)
     mol2_files = []
@@ -410,13 +415,17 @@ def run_hess(tmpdir):
 
     index_path = generate_links_vibspec(f"{tmpdir}/vibspectrum", vib_dir)
 
+
     return {
-        'frequencies': frequencies,
+        "frequencies": frequencies,
+        "has_imaginary": any(f < 0 for f in frequencies),
+        "log": log,
+        "g98_exists": os.path.exists(g98_path),
+        'vibspectrum': vib,
         'hess_log': hess_log,
-        'g98_exists': os.path.exists(g98_path),
-        'vibration_index': index_path,
-        'vibration_dir': vib_dir,
     }
+        #'vibration_index': index_path,
+        #'vibration_dir': vib_dir,
 
 
 
@@ -455,12 +464,29 @@ class BlogCreateView(CreateView):
     template_name = "post_new.html"
     fields = ["title", "author", "body"]
 
+def xyz_to_smiles(xyz_content: str, tmpdir: str) -> str:
+    """Konwertuje XYZ do SMILES przez OpenBabel."""
+    xyz_path = os.path.join(tmpdir, 'start.xyz')
+    with open(xyz_path, 'w') as f:
+        f.write(xyz_content)
+
+    result = subprocess.run(
+        ['/usr/bin/obabel', '-ixyz', xyz_path, '-osmi'],
+        capture_output=True, text=True, timeout=15
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+
+    # obabel zwraca "SMILES  nazwa\n" — bierzemy tylko pierwszą kolumnę
+    smiles = result.stdout.strip().split()[0]
+    return smiles
 
 
 def suma(request):
     result_data = None
     hess_data = None
     submitted_smiles = None
+    molecule_name = None
     current_post_id = None
     svg_2d = None
 
@@ -472,9 +498,10 @@ def suma(request):
 
         smiles = form.cleaned_data["smiles"]
         plik1 = form.cleaned_data["plik"]
-        do_hess = bool(form.cleaned_data.get("do_hess", False))
+        do_hess = form.cleaned_data.get("do_hess") == True
 
-        post = Post(smiles=smiles, title='SMILES' if smiles else 'Plik XYZ', author="test")
+        molecule_name = get_molecule_name(smiles) if smiles else 'Plik XYZ'
+        post = Post(smiles=smiles, title=molecule_name, author="test")
         post.save()
 
         current_post_id = post.id
@@ -483,25 +510,22 @@ def suma(request):
 
         try:
             if plik1:
-                xyz_content = plik1.read().decode('utf-8')
+
                 post.plik1 = plik1
                 post.save()
 
+                xyz_content = plik1.read().decode('utf-8')
+
                 with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
                     f.write(xyz_content)
+
             else:
                 submitted_smiles = smiles
-                engine = form.cleaned_data.get('engine', 'obabel')
-
-                if engine == 'rdkit':
-                    xyz_content = smiles_to_xyz_rdkit(smiles, tmpdir)
-                else:
-                    xyz_content = smiles_to_xyz_obabel(smiles, tmpdir)
-
+                xyz_content = smiles_to_xyz(smiles, tmpdir)
                 svg_2d = smiles_to_2d_svg(smiles)
 
             log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
-            xyz_to_mol2(tmpdir, 'xtbopt.xyz', 'xtbopt.mol2')
+            xyz_to_mol2(tmpdir,'xtbopt.xyz','xtbopt.mol2')
 
             result_data = {
                 'energy': energy,
@@ -517,13 +541,22 @@ def suma(request):
             post.energy = energy
             post.status = 'done' if opt_xyz else 'error'
             post.save()
+            
 
             if do_hess and opt_xyz:
                 hess_data = run_hess(tmpdir)
-                hess_data['has_imaginary'] = any(f < 0 for f in hess_data['frequencies'])
-
+                
+                post.frequencies = hess_data.get("frequencies", [])
+                post.hessian_log = hess_data.get("log", "")
+                post.has_imaginary = hess_data.get("has_imaginary", False)
+                post.save()
+                
         except Exception as e:
-            result_data = {'status': 'error', 'log': str(e)}
+            err_msg = str(e)
+            if result_data is None:
+                result_data = {'status': 'error', 'log': err_msg}
+            else:
+                hess_data = {"error": err_msg}
 
     else:
         form = Suma()
@@ -535,6 +568,7 @@ def suma(request):
         'result_data': result_data,
         'hess_data': hess_data,
         'submitted_smiles': submitted_smiles,
+        'molecule_name': molecule_name,   # ← nowe
         'post_list': post_list,
         'post_id': current_post_id,
     })
@@ -638,3 +672,18 @@ def xtb_calc_view(request):
             calc.save()
 
     return render(request, 'xtb_calc.html', {'form': form, 'calc': calc})
+
+def get_molecule_name(smiles: str) -> str:
+    """Pobiera nazwę cząsteczki z PubChem na podstawie SMILES."""
+    try:
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{requests.utils.quote(smiles)}/property/IUPACName,Title/JSON"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            props = data['PropertyTable']['Properties'][0]
+            # Title to potoczna nazwa (np. "aspirin"), IUPACName to systematyczna
+            return props.get('Title') or props.get('IUPACName') or smiles
+    except Exception:
+        pass
+    return smiles  # fallback: zwróć SMILES jeśli coś pójdzie nie tak
+    
