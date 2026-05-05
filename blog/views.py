@@ -394,10 +394,9 @@ def suma(request):
 
         try:
             if plik1:
+                xyz_content = plik1.read().decode('utf-8')
                 post.plik1 = plik1
                 post.save()
-
-                xyz_content = plik1.read().decode('utf-8')
 
                 with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
                     f.write(xyz_content)
