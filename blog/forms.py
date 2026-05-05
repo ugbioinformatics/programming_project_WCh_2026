@@ -10,7 +10,17 @@ class Suma(forms.Form):
         label='Oblicz częstotliwości drgań (--hess)',
         initial=False
     )
-    
+#rdkit/openbabel
+    ENGINE_CHOICES = [
+        ('rdkit',  'RDKit'),
+        ('obabel', 'OpenBabel'),
+    ]
+    engine = forms.ChoiceField(
+        choices=ENGINE_CHOICES,
+        widget=forms.Select,
+        initial='obabel',
+        label='Biblioteka do generowania 3D (tylko dla SMILES)',
+    )
     
     def clean(self):
         cleaned_data = super().clean()
