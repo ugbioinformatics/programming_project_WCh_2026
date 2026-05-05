@@ -65,6 +65,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 {% endif %}
 
 
+
+
+
 {% if result_data %}
 <hr>
 
@@ -111,6 +114,87 @@ document.addEventListener("DOMContentLoaded", async () => {
   {% endfor %}
 {% else %}
   <p>Brak częstotliwości — sprawdź czy plik g98.out został wygenerowany.</p>
+{% endif %}
+
+{% if hess_data.vibspectrum %}
+<hr>
+
+<h3>Widmo wibracyjne (IR spectrum)</h3>
+
+<canvas id="irSpectrum" width="900" height="350"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+{{ hess_data.vibspectrum.freqs|json_script:"freqs-data" }}
+{{ hess_data.vibspectrum.intensities|json_script:"intens-data" }}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const freqs = JSON.parse(document.getElementById("freqs-data").textContent);
+    const intens = JSON.parse(document.getElementById("intens-data").textContent);
+
+    const sigma = 20;  
+
+    const minX = 0;
+    const maxX = 4000;
+    const step = 2;
+
+    const spectrum = [];
+
+    for (let x = minX; x <= maxX; x += step) {
+        let y = 0;
+
+        for (let i = 0; i < freqs.length; i++) {
+            const f = freqs[i];
+            const I = intens[i];
+
+            y += I * Math.exp(-Math.pow(x - f, 2) / (2 * sigma * sigma));
+        }
+
+        spectrum.push({ x: x, y: y });
+    }
+
+    const ctx = document.getElementById('irSpectrum');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'IR spectrum',
+                data: spectrum,
+                borderWidth: 2,
+                fill: false,
+                tension: 0.15,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'linear',
+                    reverse: true,
+                    title: {
+                        display: true,
+                        text: 'Frequency (cm⁻¹)'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Intensity'
+                    }
+                }
+            }
+        }
+    });
+
+});
+</script>
+
 {% endif %}
 
 <details style="margin-top: 20px;">

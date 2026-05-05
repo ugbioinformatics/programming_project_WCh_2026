@@ -130,6 +130,43 @@ def run_xtb(xyz_content, tmpdir):
 
     return log, opt_xyz, energy
 
+
+def read_vibspectrum(tmpdir):
+    path = os.path.join(tmpdir, "vibspectrum")
+
+    if not os.path.exists(path):
+        return None
+
+    modes = []
+    intensities = []
+
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+
+            if not line or line.startswith("#") or line.startswith("$"):
+                continue
+
+            parts = line.split()
+
+            if len(parts) >= 4:
+                try:
+                    mode = int(parts[0])
+                    freq = float(parts[2])
+                    inten = float(parts[3])
+
+                    if freq > 0:
+                        modes.append(freq)
+                        intensities.append(inten)
+
+                except ValueError:
+                    continue
+
+    return {
+        "freqs": modes,
+        "intensities": intensities
+    }
+    
 def run_hess(tmpdir):
     xtbopt_path = os.path.join(tmpdir, 'xtbopt.xyz')
     if not os.path.exists(xtbopt_path):
@@ -158,7 +195,15 @@ def run_hess(tmpdir):
                             frequencies.append(float(p))
                         except ValueError:
                             pass
+                            
+    vib = read_vibspectrum(tmpdir)  
 
+    return {
+        'frequencies': frequencies,
+        'hess_log': hess_log,
+        'g98_exists': os.path.exists(g98_path),
+        'vibspectrum': vib
+    }
 
     def get_symbol(n):
         s = ["H","He",
@@ -353,6 +398,18 @@ class BlogListView(FormMixin, ListView):
 class BlogDetailView(DetailView):
     model = Post
     template_name = "post_detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        post = self.object
+        tmpdir = os.path.join(settings.MEDIA_ROOT, str(post.id))
+
+        vib = read_vibspectrum(tmpdir)
+
+        context["vibspectrum"] = vib
+
+        return context
 
 
 class BlogDeleteView(DeleteView):
