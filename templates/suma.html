@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-
+{% if molecule_name %}
+<div style="margin: 15px 0; padding: 12px 20px; background: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;">
+  <h2 style="margin: 0; color: #1565C0;">{{ molecule_name }}</h2>
+</div>
+{% endif %}
 {% if submitted_smiles %}
 <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
   <h3>Struktura 3D: {{ submitted_smiles }}</h3>
