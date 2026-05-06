@@ -13,12 +13,28 @@
 </form>
 
 </div>
-{% for post in post_list %}
-<div class="post-entry">
-    <h2><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
-</div>
-{% endfor %}
-<a href="{% url 'delete_all' %}">
-    <button type="button">Usuń wszystkie posty</button>
-</a>
+<form method="POST" action="{% url 'delete_selected' %}">
+    {% csrf_token %}
+    <ul>
+    {% for post in post_list %}
+        <li>
+            <h2><input type="checkbox" name="selected_posts" value="{{ post.id }}">
+            <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
+        </li>
+    {% endfor %}
+    </ul>
+
+    <div>
+
+    <button type="button" onclick="toggleAll()">Zaznacz wszystkie</button>
+    <button type="submit">Usuń zaznaczone</button>
+    </div>
+</form>
+<script>
+function toggleAll() {
+    const checkboxes = document.querySelectorAll('input[name="selected_posts"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+}
+</script>
 {% endblock content %}

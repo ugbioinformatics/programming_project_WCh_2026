@@ -3,12 +3,16 @@
 <h1>Usuwanie</h1>
 <form action="" method="post">{% csrf_token %}
 
-	{% if all %}
-	<p>Czy na pewno chcesz usunąć wszystkie posty ({{ count }})"?</p>
-	{% else %}
-	<p>Czy na pewno chcesz usunąć "{{ post.title }}"?</p>
+	{% if posts %}
+	<p>Czy na pewno chcesz usunąć te posty: ({{ posts|length }})</p>
+        <ul>
+        {% for p in posts %}
+            <li>{{ p.title }}</li>
+            <input type="hidden" name="selected_posts" value="{{ p.id }}">
+        {% endfor %}
+        </ul>
 	{% endif %}
 
-	<input type="submit" value="Confirm">
+	<input type="submit" name="confirm" value="TAK">
 </form>
 {% endblock content %}

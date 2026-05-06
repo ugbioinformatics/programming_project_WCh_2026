@@ -370,11 +370,10 @@ def run_hess(tmpdir):
             content = f.read().splitlines()[9:]
             with open(f'{vib_dir}/link_list.html', 'w') as t:
                 t.write("<pre>")
-                print(content)
                 for i, line in enumerate(content,start=0):
                     if line == "$end":
                         continue
-                    t.write(f'<a href="{i}.html">{line}</a><br>\n')
+                    t.write(f'<a href="{i}.html">Wibracja {i}</a><br>\n')
                     with open(f"{vib_dir}/{i}.html", 'w') as d:
                         text = """<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
   <script>
@@ -390,7 +389,7 @@ def run_hess(tmpdir):
      });
     });
   </script>
-  <div id="viewport" style="width:400px; height:300px;"></div>"""
+  <div id="viewport" style="width:500px; height:500px;"></div>"""
                         if "placeholder" in text:
                             new_text = text.replace("placeholder", f"vib_{i}.mol2")
                         d.write(new_text)
@@ -465,16 +464,16 @@ class BlogCreateView(CreateView):
     template_name = "post_new.html"
     fields = ["title", "author", "body"]
 
-class DeleteAll(View):
-    template_name = "post_delete.html"
-
-    def get(self,request):
-        count = Post.objects.count()
-        return render(request, self.template_name, {"all": True, "count": count})
+class DeleteSelected(View):
     def post(self, request):
-        Post.objects.all().delete()
+        ids = request.POST.getlist("selected_posts")
+        posts = Post.objects.filter(id__in=ids)
+        if not ids:
+            return redirect("home")
+        if "confirm" not in request.POST:
+            return render(request, "post_delete.html", {"posts": posts, "selected_ids": ids})
+        posts.delete()
         return redirect('home')
-
 
 def xyz_to_smiles(xyz_content: str, tmpdir: str) -> str:
     """Konwertuje XYZ do SMILES przez OpenBabel."""
