@@ -103,7 +103,7 @@ def smiles_to_2d_svg(smiles: str) -> str:
 
 
 
-XTB_BIN = '/big/appl/xtb-dist/bin/xtb'
+XTB_BIN = '/usr/bin/xtb'
 
 
 
@@ -449,6 +449,15 @@ class BlogDetailView(DetailView):
         vib = read_vibspectrum(tmpdir)
 
         context["vibspectrum"] = vib
+
+        svg_2d = None
+        if post.smiles:
+            try:
+                svg_2d = smiles_to_2d_svg(post.smiles)
+            except Exception:
+                svg_2d = None
+
+        context["svg_2d"] = svg_2d
 
         return context
 

@@ -119,10 +119,17 @@
   {% endif %}
 
     
- <!-- ===== NGL viewer ===== -->
+{% if svg_2d %}
+<hr>
+
+<h3>Struktura 2D</h3>
+<div>
+  {{ svg_2d|safe }}
+</div>
+{% endif %}
+    
   <script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
   <div id="viewport" style="width:400px; height:300px;"></div>
-
 
   <script>
   document.addEventListener("DOMContentLoaded", function () {
@@ -213,9 +220,7 @@
 
 
 
-<p>{{ post.energy }}</p>  
-<pre>{{ post.optimized_xyz }}</pre>
-<pre>{{post.frequencies}}</pre>
+
 
 <p>
 <a href="/PLIKI/{{post.id}}/vibrations/link_list.html"> Częstości </a>
