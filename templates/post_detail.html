@@ -21,6 +21,18 @@
          style="width:600px; height:400px; position:relative;">
     </div>
 
+    <!-- 🧬 PANEL INFO O ATOMIE -->
+    <div id="atomInfoPanel" style="
+      margin-top: 15px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+      font-family: monospace;
+    ">
+      Kliknij atom, aby zobaczyć szczegóły
+    </div>
+
   </div>
 
   {{ post.smiles|json_script:"smiles-data" }}
@@ -33,6 +45,7 @@
       const loading = document.getElementById("loading");
       const errorBox = document.getElementById("smilesError");
       const viewerDiv = document.getElementById("smilesViewer");
+      const atomInfoPanel = document.getElementById("atomInfoPanel");
 
       const smiles = JSON.parse(document.getElementById("smiles-data").textContent);
       const url = "{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles);
@@ -63,46 +76,60 @@
 
         viewer.setClickable({}, true, function(atom) {
 
+
           if (pulseInterval) {
             clearInterval(pulseInterval);
             pulseInterval = null;
           }
+
 
           viewer.setStyle({}, {
             stick: { radius: 0.2, colorscheme: "CPK" },
             sphere: { scale: 0.28, colorscheme: "CPK" }
           });
 
+
           let scale = 0.6;
           let growing = false;
 
-
           pulseInterval = setInterval(() => {
 
-            if (growing) {
-              scale -= 0.08;
-              if (scale <= 0.3) growing = false;
-            } else {
-              scale += 0.08;
-              if (scale >= 0.6) growing = true;
-            }
+            scale += (growing ? -0.08 : 0.08);
+
+            if (scale >= 0.6) growing = true;
+            if (scale <= 0.3) growing = false;
 
             viewer.setStyle({ serial: atom.serial }, {
-              stick: {
-                radius: 0.2,
-                colorscheme: "CPK"
-              },
-              sphere: {
-                scale: scale,
-                colorscheme: "CPK"
-              }
+              stick: { radius: 0.2, colorscheme: "CPK" },
+              sphere: { scale: scale, colorscheme: "CPK" }
             });
 
             viewer.render();
 
           }, 60);
-        });
 
+
+          const element = atom.elem || "unknown";
+
+          const coords = atom.x !== undefined
+            ? `(${atom.x.toFixed(2)}, ${atom.y.toFixed(2)}, ${atom.z.toFixed(2)})`
+            : "brak danych";
+
+          const residue = atom.resn
+            ? `${atom.resn} (resi ${atom.resi ?? "?"})`
+            : "brak (mała cząsteczka)";
+
+          const chain = atom.chain || "brak";
+
+          atomInfoPanel.innerHTML = `
+            <b>Atom:</b> ${element}<br>
+            <b>Serial:</b> ${atom.serial ?? "?"}<br>
+            <b>Pozycja 3D:</b> ${coords}<br>
+            <b>Reszta:</b> ${residue}<br>
+            <b>Łańcuch:</b> ${chain}<br>
+          `;
+
+        });
 
         viewer.zoomTo();
         viewer.zoom(1.1);
@@ -117,16 +144,35 @@
   </script>
 
   {% endif %}
-
-    
-{% if svg_2d %}
-<hr>
-
-<h3>Struktura 2D</h3>
-<div>
-  {{ svg_2d|safe }}
 </div>
-{% endif %}
+
+
+<div class="post-entry">
+
+  {% if svg_2d %}
+
+  <hr>
+
+  <h3>Struktura 2D</h3>
+
+  <div style="
+      display: flex;
+      justify-content: left;
+      align-items: left;
+      padding: 20px;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      overflow: auto;
+  ">
+    <div id="svgContainer">
+      {{ svg_2d|safe }}
+    </div>
+  </div>
+
+  {% endif %}
+
+</div>
     
   <script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
   <div id="viewport" style="width:400px; height:300px;"></div>
