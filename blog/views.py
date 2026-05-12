@@ -168,7 +168,55 @@ def read_vibspectrum(tmpdir):
         "freqs": modes,
         "intensities": intensities
     }
-    
+
+def get_nist_ir_data(smiles):
+    """Pobiera dane IR z NIST na podstawie SMILES."""
+    try:
+        # SMILES -> CAS
+        pc_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{requests.utils.quote(smiles)}/synonyms/JSON"
+        pc_res = requests.get(pc_url, timeout=5)
+        cas_number = None
+
+        if pc_res.status_code == 200:
+            synonyms = pc_res.json().get('InformationList', {}).get('Information', [{}])[0].get('Synonym', [])
+            for syn in synonyms:
+                if re.match(r'^\d+-\d+-\d+$', syn):
+                    cas_number = syn.replace("-", "")
+                    break
+
+        if not cas_number:
+            return None
+
+        # plik JDX
+        nist_url = f"https://webbook.nist.gov/cgi/cbook.cgi?JCAMP=C{cas_number}&Index=0&Type=IR"
+        nist_res = requests.get(nist_url, timeout=5)
+
+        if nist_res.status_code != 200 or "##TITLE" not in nist_res.text:
+            return None
+
+        # Parser
+        lines = nist_res.text.splitlines()
+        xy_data = []
+        in_data_block = False
+
+        for line in lines:
+            if "##XYDATA=(X++(Y..Y))" in line:
+                in_data_block = True
+                continue
+            if line.startswith("##") and in_data_block:
+                break
+            if in_data_block:
+                parts = line.split()
+                if len(parts) >= 2:
+                    x = float(parts[0])
+                    y = float(parts[1])
+                    xy_data.append({'x': x, 'y': y})
+
+        return xy_data
+    except Exception as e:
+        print(f"NIST Error: {e}")
+        return None
+
 def run_hess(tmpdir):
     xtbopt_path = os.path.join(tmpdir, 'xtbopt.xyz')
     if not os.path.exists(xtbopt_path):
@@ -449,6 +497,9 @@ class BlogDetailView(DetailView):
         vib = read_vibspectrum(tmpdir)
 
         context["vibspectrum"] = vib
+
+        if post.smiles:
+            context["nist_ir"] = get_nist_ir_data(post.smiles)
 
         svg_2d = None
         if post.smiles:
