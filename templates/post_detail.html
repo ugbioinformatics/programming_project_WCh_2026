@@ -105,19 +105,38 @@
           sphere: { scale: 0.28, colorscheme: "CPK" }
         });
 
+        let selectedAtoms = [];
+
         viewer.setClickable({}, true, function(atom) {
+
+            selectedAtoms.push(atom);
+
+
+            if (selectedAtoms.length > 2) {
+              selectedAtoms = [atom];
+            }
 
 
           if (pulseInterval) {
             clearInterval(pulseInterval);
             pulseInterval = null;
           }
-
-
-          viewer.setStyle({}, {
+            viewer.setStyle({}, {
             stick: { radius: 0.2, colorscheme: "CPK" },
             sphere: { scale: 0.28, colorscheme: "CPK" }
-          });
+            });
+
+            selectedAtoms.forEach(a => {
+              viewer.setStyle({ serial: a.serial }, {
+                stick: { radius: 0.25, colorscheme: "yellowCarbon" },
+                sphere: { scale: 0.35, color: "orange" }
+              });
+            });
+
+viewer.render();
+            
+
+
 
 
           let scale = 0.6;
@@ -166,6 +185,26 @@
             <b>Sąsiedzi:</b> ${rd.neighbors.join(", ")}<br>
 
             `;
+            if (selectedAtoms.length === 2) {
+
+                const a1 = selectedAtoms[0];
+                const a2 = selectedAtoms[1];
+
+                const dx = a1.x - a2.x;
+                const dy = a1.y - a2.y;
+                const dz = a1.z - a2.z;
+
+                const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+                atomInfoPanel.innerHTML += `
+                    <hr>
+                    <b>Pomiar odległości:</b><br>
+                    Atom 1: ${a1.serial}<br>
+                    Atom 2: ${a2.serial}<br>
+                    <b>Odległość:</b> ${dist.toFixed(3)} Å
+                `;
+                selectedAtoms = [];
+                }
 
         });
 
@@ -467,53 +506,6 @@ document
   </script>
 
   {% endif %}
-
-  {% if nist_ir %}
-  <hr>
-  <h3>Widmo IR z bazy NIST</h3>
-  <canvas id="nistSpectrum" width="800" height="300"></canvas>
-
-  {{ nist_ir|json_script:"nist-data" }}
-
-  <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const nistData = JSON.parse(document.getElementById("nist-data").textContent);
-    const ctxNist = document.getElementById('nistSpectrum');
-
-    new Chart(ctxNist, {
-        type: 'line',
-        data: {
-            datasets: [{
-                label: 'NIST Reference IR',
-                data: nistData,
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 2,
-                tension: 0.15,
-                pointRadius: 0
-            }]
-        },
-        options: {
-            scales: {
-          x: {
-            type: 'linear',
-            reverse: true,
-            title: {
-              display: true,
-              text: 'Frequency (cm⁻¹)'
-            }
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Intensity'
-            }
-            }
-        } }
-    });
-  });
-</script>
-{% endif %}
 
 
 
