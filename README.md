@@ -21,6 +21,8 @@ do wykonania
 10. (Olek)opacje konwersji obabel albo rdkit na stronie głownej
 11. wpisy wybranych (energia) wynikow do bazy danych razem z ich wyświetlaniem
 12. naprawić obliczenia startujące z pliku xyz
+13. dodać logowanie na podstawie przykładu https://etoh.chem.univ.gda.pl/~czarek/projekt/logowanie.html
+14. na podstawie nazwy związku chemicznego dodać wyszukowanie widma IR w https://webbook.nist.gov/chemistry/ lub innej bazie danych
    
 
    
