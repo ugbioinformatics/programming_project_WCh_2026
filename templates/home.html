@@ -4,15 +4,13 @@
 {% include "przycisk_Get_SMAILS.html" %}
 
 <p>
-<form action="post/suma/" method="POST" enctype="multipart/form-data" >
+<form action="{% url 'suma' %}" method="POST" enctype="multipart/form-data" >
                  {% csrf_token %}
                  <table>
                  {{ form.as_table }}
                  </table>
 <button type="submit" class="save btn btn-default">Uruchom</button>
 </form>
-
-
 
 </div>
 <form method="POST" action="{% url 'delete_selected' %}">

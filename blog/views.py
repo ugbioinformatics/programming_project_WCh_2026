@@ -480,11 +480,21 @@ def run_hess(tmpdir):
 
 
 
+#form_class = Suma
 
-class BlogListView(FormMixin, ListView):
-    model = Post
-    template_name = "home.html"
-    form_class = Suma
+class BlogListView(ListView):
+     model = Post
+     template_name = "home.html"
+     def get_queryset(self, **kwargs):
+        qs = super().get_queryset(**kwargs)
+        if self.request.user.is_authenticated:
+            return qs.filter(author=self.request.user)
+        else:
+            return qs.filter(author=None)
+     def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = Suma()
+        return context
 
 
 class BlogDetailView(DetailView):
@@ -575,7 +585,9 @@ def suma(request):
         do_hess = form.cleaned_data.get("do_hess") == True
 
         molecule_name = get_molecule_name(smiles) if smiles else 'Plik XYZ'
-        post = Post(smiles=smiles, title=molecule_name, author="test")
+        post = Post(smiles=smiles, title=molecule_name)
+        if request.user.is_authenticated: # If not authenticated, author = None
+            post.author = request.user
         post.save()
 
         current_post_id = post.id
@@ -750,7 +762,10 @@ def xtb_calc_view(request):
             calc = XTBCalculation(input_type=input_type)
 
             try:
-                post = Post(title="XTB", author="test")
+                if request.user.is_authenticated:
+                    post = Post(title="XTB", author=request.user)
+                else:
+                    post = Post(title="XTB", author=None)
                 post.save()
 
                 tmpdir = os.path.join(settings.MEDIA_ROOT, str(post.id))

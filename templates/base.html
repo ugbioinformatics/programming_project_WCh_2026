@@ -7,6 +7,17 @@
     <link href="{% static 'css/base.css' %}" rel="stylesheet">
   </head>
   <body>
+  {% if user.is_authenticated %}
+  Hi {{ user.username }}!
+  <form action="{% url 'logout' %}" method="post" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit">
+      Log Out
+    </button>
+  </form>
+{% else %}
+  You are not logged in. <a href="{% url 'login' %}">Log In</a>
+{% endif %}
     <div>
       <header>
         <div class="nav-left">
