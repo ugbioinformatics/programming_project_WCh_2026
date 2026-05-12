@@ -468,6 +468,53 @@ document
 
   {% endif %}
 
+  {% if nist_ir %}
+  <hr>
+  <h3>Widmo IR z bazy NIST</h3>
+  <canvas id="nistSpectrum" width="800" height="300"></canvas>
+
+  {{ nist_ir|json_script:"nist-data" }}
+
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const nistData = JSON.parse(document.getElementById("nist-data").textContent);
+    const ctxNist = document.getElementById('nistSpectrum');
+
+    new Chart(ctxNist, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'NIST Reference IR',
+                data: nistData,
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 2,
+                tension: 0.15,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            scales: {
+          x: {
+            type: 'linear',
+            reverse: true,
+            title: {
+              display: true,
+              text: 'Frequency (cm⁻¹)'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Intensity'
+            }
+            }
+        } }
+    });
+  });
+</script>
+{% endif %}
+
 
 
 
