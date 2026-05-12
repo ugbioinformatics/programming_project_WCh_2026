@@ -33,6 +33,16 @@
     ">
       Kliknij atom, aby zobaczyć szczegóły
     </div>
+      <div id="moleculeInfoPanel" style="
+         margin-top: 15px;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background: #f5f5f5;
+        font-family: monospace;
+        ">
+        Ładowanie danych cząsteczki...
+        </div>
 
   </div>
 
@@ -47,6 +57,7 @@
       const errorBox = document.getElementById("smilesError");
       const viewerDiv = document.getElementById("smilesViewer");
       const atomInfoPanel = document.getElementById("atomInfoPanel");
+      const moleculeInfoPanel = document.getElementById("moleculeInfoPanel");
 
       const smiles = JSON.parse(document.getElementById("smiles-data").textContent);
       const url = "{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles);
@@ -56,13 +67,32 @@
       try {
         const res = await fetch(url);
         const data = await res.json();
-
+        const atoms = data.atoms;
         loading.style.display = "none";
 
         if (data.error) {
           errorBox.textContent = data.error;
           return;
         }
+          
+
+        const atomMap = {};
+        atoms.forEach(a => {
+         atomMap[a.idx] = a;
+        });  
+
+          
+        moleculeInfoPanel.innerHTML = `
+         <b>Wzór sumaryczny:</b> ${data.formula}<br>
+         <b>Masa molowa:</b> ${data.molecular_weight} g/mol<br>
+         <b>Liczba ciężkich atomów:</b> ${data.heavy_atoms}<br>
+         <b>Liczba wiązań:</b> ${data.num_bonds}<br>
+         <b>Wiązania rotowalne:</b> ${data.rotatable_bonds}<br>
+         <b>Donory H:</b> ${data.h_donors}<br>
+         <b>Akceptory H:</b> ${data.h_acceptors}<br>
+         <b>TPSA:</b> ${data.tpsa}<br>
+         <b>logP:</b> ${data.logp}
+        `;
 
         const viewer = $3Dmol.createViewer(viewerDiv, {
           backgroundColor: "white"
@@ -121,12 +151,21 @@
             : "brak (mała cząsteczka)";
 
           const chain = atom.chain || "brak";
+          const rd = atomMap[atom.serial];
 
           atomInfoPanel.innerHTML = `
             <b>Atom:</b> ${element}<br>
             <b>Serial:</b> ${atom.serial ?? "?"}<br>
             <b>Pozycja 3D:</b> ${coords}<br>
-          `;
+
+            <b>Masa:</b> ${rd.mass}<br>
+            <b>Walencyjność:</b> ${rd.valency}<br>
+            <b>Ładunek:</b> ${rd.charge}<br>
+            <b>Hybrydyzacja:</b> ${rd.hybridization}<br>
+            <b>Aromatyczność:</b> ${rd.aromatic}<br>
+            <b>Sąsiedzi:</b> ${rd.neighbors.join(", ")}<br>
+
+            `;
 
         });
 
@@ -134,6 +173,63 @@
         viewer.zoom(1.1);
         viewer.center();
         viewer.render();
+
+
+
+
+
+const surfaceDiv = document.getElementById("surfaceViewer");
+
+const surfaceViewer = $3Dmol.createViewer(surfaceDiv, {
+  backgroundColor: "white"
+});
+
+surfaceViewer.addModel(data.mol_block, "mol");
+
+surfaceViewer.setStyle({}, {
+  stick: {
+    radius: 0.12,
+    colorscheme: "lightgrey"
+  }
+});
+
+const typeMap = {
+  VDW: $3Dmol.SurfaceType.VDW, 
+  SAS: $3Dmol.SurfaceType.SAS, 
+  SES: $3Dmol.SurfaceType.SES  
+};
+
+let currentSurface = null;
+
+function updateSurface(type) {
+
+  if (currentSurface !== null) {
+    surfaceViewer.removeAllSurfaces();
+  }
+
+  currentSurface = surfaceViewer.addSurface(
+    typeMap[type],
+    {
+      opacity: 0.85,
+      color: "lightblue"
+    }
+  );
+
+  surfaceViewer.zoomTo();
+  surfaceViewer.render();
+}
+
+updateSurface("VDW");
+
+document
+  .getElementById("surfaceType")
+  .addEventListener("change", function(e) {
+
+    updateSurface(e.target.value);
+
+  });
+
+
 
       } catch (err) {
         loading.style.display = "none";
@@ -145,6 +241,115 @@
   {% endif %}
 </div>
 
+<hr>
+
+<h3>Powierzchnia molekularna</h3>
+
+{% if properties %}
+
+<hr>
+
+<h3>Właściwości molekuły</h3>
+
+<div style="
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+">
+
+  <table style="
+    width: 100%;
+    border-collapse: collapse;
+    font-family: monospace;
+  ">
+
+    <tr>
+      <td><strong>Wzór sumaryczny</strong></td>
+      <td>{{ properties.formula }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>Masa molowa</strong></td>
+      <td>{{ properties.mol_weight }} g/mol</td>
+    </tr>
+
+    <tr>
+      <td><strong>Liczba atomów</strong></td>
+      <td>{{ properties.num_atoms }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>Liczba wiązań</strong></td>
+      <td>{{ properties.num_bonds }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>logP</strong></td>
+      <td>{{ properties.logp }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>TPSA</strong></td>
+      <td>{{ properties.tpsa }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>H-bond donors</strong></td>
+      <td>{{ properties.h_donors }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>H-bond acceptors</strong></td>
+      <td>{{ properties.h_acceptors }}</td>
+    </tr>
+
+  </table>
+
+</div>
+
+{% endif %}
+
+<div style="
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+">
+
+  <div style="margin-bottom: 15px;">
+
+    <label for="surfaceType">
+      <strong>Typ powierzchni:</strong>
+    </label>
+
+    <select id="surfaceType" style="
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-left: 10px;
+    ">
+      <option value="VDW">VDW</option>
+      <option value="SAS">SAS</option>
+      <option value="SES">SES</option>
+    </select>
+
+  </div>
+
+  <div id="surfaceViewer"
+       style="
+         width:700px;
+         height:500px;
+         position:relative;
+         border:1px solid #ddd;
+         border-radius:8px;
+         overflow:hidden;
+       ">
+  </div>
+
+</div>
 
 <div class="post-entry">
 

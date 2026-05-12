@@ -14,6 +14,9 @@ from django.conf import settings
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem.Draw import rdMolDraw2D
+from rdkit.Chem import Descriptors
+from rdkit.Chem.rdMolDescriptors import CalcMolFormula
+from rdkit.Chem import Lipinski
 
 from .models import Post, XTBCalculation
 from .forms import Suma, XTBInputForm
@@ -626,7 +629,52 @@ def smiles3de(request):
 
         AllChem.UFFOptimizeMolecule(mol)
 
-        return JsonResponse({"mol_block": Chem.MolToMolBlock(mol)})
+        mol_formula = CalcMolFormula(mol)
+
+        mol_weight = round(Descriptors.MolWt(mol), 2)
+
+        heavy_atoms = mol.GetNumHeavyAtoms()
+
+        num_bonds = mol.GetNumBonds()
+
+        rot_bonds = Lipinski.NumRotatableBonds(mol)
+
+        h_donors = Lipinski.NumHDonors(mol)
+
+        h_acceptors = Lipinski.NumHAcceptors(mol)
+
+        tpsa = round(Descriptors.TPSA(mol), 2)
+
+        logp = round(Descriptors.MolLogP(mol), 2)
+        atoms_data = []
+
+        for atom in mol.GetAtoms():
+            atoms_data.append({
+            "idx": atom.GetIdx(),
+            "symbol": atom.GetSymbol(),
+            "mass": round(atom.GetMass(), 3),
+            "valency": atom.GetTotalValence(),
+            "hybridization": str(atom.GetHybridization()),
+            "charge": atom.GetFormalCharge(),
+            "aromatic": atom.GetIsAromatic(),
+            "neighbors": [n.GetIdx() for n in atom.GetNeighbors()],
+    })
+
+        return JsonResponse({
+            "mol_block": Chem.MolToMolBlock(mol),
+
+            "formula": mol_formula,
+            "molecular_weight": mol_weight,
+            "heavy_atoms": heavy_atoms,
+            "num_bonds": num_bonds,
+            "rotatable_bonds": rot_bonds,
+            "h_donors": h_donors,
+            "h_acceptors": h_acceptors,
+            "tpsa": tpsa,
+            "logp": logp,
+
+            "atoms": atoms_data
+        })
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
