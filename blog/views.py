@@ -19,7 +19,7 @@ from .models import Post, XTBCalculation
 from .forms import Suma, XTBInputForm
 
 
-
+# DO USUNIĘCIA??????????????????
 def runProcess(command, cwd=None, timeout=120):
     try:
         result = subprocess.run(
