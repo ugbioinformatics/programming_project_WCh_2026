@@ -417,12 +417,12 @@ def run_hess(tmpdir):
 
 
     return {
-        "frequencies": frequencies,
+        "frequencies": freqs,
         "has_imaginary": any(f < 0 for f in frequencies),
         "log": log,
         "g98_exists": os.path.exists(g98_path),
-        'vibspectrum': vib,
-        'hess_log': hess_log,
+        "vibspectrum": read_vibspectrum(tmpdir),
+        "hess_log": log,
     }
         #'vibration_index': index_path,
         #'vibration_dir': vib_dir,
@@ -565,6 +565,7 @@ def suma(request):
 
             if do_hess and opt_xyz:
                 hess_data = run_hess(tmpdir)
+                hess_data["vibspectrum"] = read_vibspectrum(tmpdir)
                 
                 post.frequencies = hess_data.get("frequencies", [])
                 post.hessian_log = hess_data.get("log", "")
