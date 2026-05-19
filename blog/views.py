@@ -406,8 +406,6 @@ class BlogListView(FormMixin, ListView):
 class BlogDetailView(DetailView):
     model = Post
     template_name = "post_detail.html"
-
-<<<<<<< HEAD
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -420,8 +418,6 @@ class BlogDetailView(DetailView):
 
         return context
 
-=======
->>>>>>> origin/martyna1
 
 class BlogDeleteView(DeleteView):
     model = Post
@@ -447,7 +443,6 @@ def xyz_to_smiles(xyz_content: str, tmpdir: str) -> str:
     if result.returncode != 0 or not result.stdout.strip():
         return None
 
-    # obabel zwraca "SMILES  nazwa\n" — bierzemy tylko pierwszą kolumnę
     smiles = result.stdout.strip().split()[0]
     return smiles
 
@@ -462,17 +457,12 @@ def suma(request):
 
     if request.method == 'POST':
         form = Suma(request.POST, request.FILES)
-
         if not form.is_valid():
             return render(request, 'bad_input.html', {'form': form})
 
         smiles = form.cleaned_data["smiles"]
         plik1 = form.cleaned_data["plik"]
-<<<<<<< HEAD
-        do_hess = bool(form.cleaned_data.get("do_hess", False))
-=======
         do_hess = form.cleaned_data.get("do_hess") == True
->>>>>>> origin/martyna1
 
         molecule_name = get_molecule_name(smiles) if smiles else 'Plik XYZ'
         post = Post(smiles=smiles, title=molecule_name, author="test")
@@ -484,47 +474,28 @@ def suma(request):
 
         try:
             if plik1:
-<<<<<<< HEAD
-                xyz_content = plik1.read().decode('utf-8')
                 post.plik1 = plik1
                 post.save()
-                
-                smiles_from_xyz = xyz_to_smiles(xyz_content, tmpdir)          
-                molecule_name = get_molecule_name(smiles_from_xyz) if smiles_from_xyz else     'Nieznana cząsteczka'  
-                post.title = molecule_name                                    
-                post.save()                                                    
+                xyz_content = plik1.read().decode('utf-8')
+                with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
+                    f.write(xyz_content)
 
+                smiles_from_xyz = xyz_to_smiles(xyz_content, tmpdir)
+                molecule_name = get_molecule_name(smiles_from_xyz) if smiles_from_xyz else 'Nieznana cząsteczka'
+                post.title = molecule_name
+                post.save()
             else:
                 submitted_smiles = smiles
                 molecule_name = get_molecule_name(smiles)
                 engine = form.cleaned_data.get('engine', 'obabel')
-
                 if engine == 'rdkit':
                     xyz_content = smiles_to_xyz_rdkit(smiles, tmpdir)
                 else:
                     xyz_content = smiles_to_xyz_obabel(smiles, tmpdir)
-
                 svg_2d = smiles_to_2d_svg(smiles)
 
             log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
             xyz_to_mol2(tmpdir, 'xtbopt.xyz', 'xtbopt.mol2')
-=======
-                post.plik1 = plik1
-                post.save()
-
-                xyz_content = plik1.read().decode('utf-8')
-
-                with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
-                    f.write(xyz_content)
-
-            else:
-                submitted_smiles = smiles
-                xyz_content = smiles_to_xyz(smiles, tmpdir)
-                svg_2d = smiles_to_2d_svg(smiles)
-
-            log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
-            xyz_to_mol2(tmpdir,'xtbopt.xyz','xtbopt.mol2')
->>>>>>> origin/martyna1
 
             result_data = {
                 'energy': energy,
@@ -540,32 +511,21 @@ def suma(request):
             post.energy = energy
             post.status = 'done' if opt_xyz else 'error'
             post.save()
-<<<<<<< HEAD
 
             if do_hess and opt_xyz:
                 hess_data = run_hess(tmpdir)
                 hess_data['has_imaginary'] = any(f < 0 for f in hess_data['frequencies'])
-
-        except Exception as e:
-            result_data = {'status': 'error', 'log': str(e)}
-=======
-            
-
-            if do_hess and opt_xyz:
-                hess_data = run_hess(tmpdir)
-                
                 post.frequencies = hess_data.get("frequencies", [])
                 post.hessian_log = hess_data.get("log", "")
                 post.has_imaginary = hess_data.get("has_imaginary", False)
                 post.save()
-                
+
         except Exception as e:
             err_msg = str(e)
             if result_data is None:
                 result_data = {'status': 'error', 'log': err_msg}
             else:
                 hess_data = {"error": err_msg}
->>>>>>> origin/martyna1
 
     else:
         form = Suma()
@@ -577,11 +537,10 @@ def suma(request):
         'result_data': result_data,
         'hess_data': hess_data,
         'submitted_smiles': submitted_smiles,
-        'molecule_name': molecule_name,   # ← nowe
+        'molecule_name': molecule_name,
         'post_list': post_list,
         'post_id': current_post_id,
     })
-
 
 
 def download_g98(request, post_id):
