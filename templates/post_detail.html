@@ -433,21 +433,27 @@ document
   <pre>{{ post.optimized_xyz }}</pre>
 
 
-  {% if vibspectrum %}
-  <hr>
+{% if vibspectrum %}
 
-  <h3>Widmo wibracyjne (IR)</h3>
+<hr>
+<div style="margin: 20px 0;">
+  <label for="canvasSize"><strong>Wysokość wykresów:</strong></label>
+  <input type="range" id="canvasSize" min="200" max="400" value="300" style="vertical-align: middle; margin-left: 10px;">
+</div>
 
-  <canvas id="irSpectrum" width="800" height="300"></canvas>
+<h3>Widmo wibracyjne (IR)</h3>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="chart-container" style="position: relative; width: 800px; height: 300px;">
+  <canvas id="irSpectrum"></canvas>
+</div>
 
-  {{ vibspectrum.freqs|json_script:"freqs-data" }}
-  {{ vibspectrum.intensities|json_script:"intens-data" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <script>
-  document.addEventListener("DOMContentLoaded", function () {
+{{ vibspectrum.freqs|json_script:"freqs-data" }}
+{{ vibspectrum.intensities|json_script:"intens-data" }}
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
     const freqs = JSON.parse(document.getElementById("freqs-data").textContent);
     const intens = JSON.parse(document.getElementById("intens-data").textContent);
 
@@ -459,67 +465,56 @@ document
     const spectrum = [];
 
     for (let x = minX; x <= maxX; x += step) {
-      let y = 0;
-
-      for (let i = 0; i < freqs.length; i++) {
-        y += intens[i] * Math.exp(-Math.pow(x - freqs[i], 2) / (2 * sigma * sigma));
-      }
-
-      spectrum.push({ x: x, y: y });
+        let y = 0;
+        for (let i = 0; i < freqs.length; i++) {
+            y += intens[i] * Math.exp(-Math.pow(x - freqs[i], 2) / (2 * sigma * sigma));
+        }
+        spectrum.push({ x: x, y: y });
     }
 
     const ctx = document.getElementById('irSpectrum');
 
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: 'IR spectrum',
-          data: spectrum,
-          borderWidth: 2,
-          tension: 0.15,
-          pointRadius: 0
-        }]
-      },
-      options: {
-        scales: {
-          x: {
-            type: 'linear',
-            reverse: true,
-            title: {
-              display: true,
-              text: 'Frequency (cm⁻¹)'
+    window.irChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'IR spectrum',
+                data: spectrum,
+                borderWidth: 2,
+                tension: 0.15,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { type: 'linear', reverse: true },
+                y: { beginAtZero: true }
             }
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Intensity'
-            }
-          }
         }
-      }
     });
+});
+</script>
 
-  });
-  </script>
 
-  {% endif %}
+{% if nist_ir %}
 
-  {% if nist_ir %}
-  <hr>
-  <h3>Widmo IR z bazy NIST</h3>
-  <canvas id="nistSpectrum" width="800" height="300"></canvas>
+<hr>
+<h3>Widmo IR z bazy NIST</h3>
 
-  {{ nist_ir|json_script:"nist-data" }}
+<div class="chart-container" style="position: relative; width: 800px; height: 300px;">
+  <canvas id="nistSpectrum"></canvas>
+</div>
 
-  <script>
-  document.addEventListener("DOMContentLoaded", function () {
+{{ nist_ir|json_script:"nist-data" }}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
     const nistData = JSON.parse(document.getElementById("nist-data").textContent);
     const ctxNist = document.getElementById('nistSpectrum');
 
-    new Chart(ctxNist, {
+    window.nistChart = new Chart(ctxNist, {
         type: 'line',
         data: {
             datasets: [{
@@ -532,32 +527,49 @@ document
             }]
         },
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
             scales: {
-          x: {
-            type: 'linear',
-            reverse: true,
-            title: {
-              display: true,
-              text: 'Frequency (cm⁻¹)'
+                x: { type: 'linear', reverse: true, min: 0 },
+                y: { beginAtZero: true }
             }
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Intensity'
-            }
-            }
-        } }
+        }
     });
-  });
+});
 </script>
+
+{% endif %}
+
 {% endif %}
 
 
+{% if vibspectrum %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const slider = document.getElementById("canvasSize");
 
+    if (slider) {
+        slider.addEventListener("input", function () {
+            const h = this.value + "px";
 
+            const irCanvas = document.getElementById("irSpectrum");
+            const nistCanvas = document.getElementById("nistSpectrum");
 
+            if (irCanvas) {
+                irCanvas.parentElement.style.height = h;
+            }
+            if (nistCanvas) {
+                nistCanvas.parentElement.style.height = h;
+            }
+
+            if (window.irChart) window.irChart.resize();
+            if (window.nistChart) window.nistChart.resize();
+        });
+    }
+});
+</script>
+{% endif %}
+{% if vibspectrum %}
 <p>
 <a href="/PLIKI/{{post.id}}/vibrations/link_list.html"
    style="display:inline-block;
@@ -568,7 +580,7 @@ document
           border-radius:8px;">
     Częstości
 </a>
-
+{% endif %}
 <p>
     <a href="{% url 'post_delete' post.pk %}"
        style="display:inline-block;
@@ -580,7 +592,6 @@ document
         Usuń post
     </a>
 </p>
-
 
 <script>
 document.addEventListener("scroll", function () {
