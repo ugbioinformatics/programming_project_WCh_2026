@@ -416,29 +416,42 @@ def run_hess(tmpdir):
         return frames
 
     def generate_links_vibspec(input_dir, vib_dir):
+
         with open(input_dir, 'r', encoding='utf-8') as f:
+
             content = f.read().splitlines()[9:]
+
             with open(f'{vib_dir}/link_list.html', 'w', encoding='utf-8') as t:
+
                 t.write("<pre>")
+
                 t.write('''
 <a href="javascript:history.back()"
-    style="display:block;
-    width:100%;
-    text-align:center;
-    background:#ef4444;
-    color:white;
-    text-decoration:none;
-    border-radius:8px;
-    padding:16px 0;
-    font-size:18px;
-    font-weight:400;
-    margin-bottom:10px;">
-    Powrot do posta
+style="display:block;
+width:100%;
+text-align:center;
+background:#ef4444;
+color:white;
+text-decoration:none;
+border-radius:8px;
+padding:16px 0;
+font-size:18px;
+font-weight:400;
+margin-bottom:10px;">
+Powrot do posta
 </a>
 ''')
-                for i, line in enumerate(content, start=0):
+                
+                for i, line in enumerate(content):
+
                     if line == "$end":
                         continue
+
+                    freq = freqs[i] if i < len(freqs) else 0.0
+                    sym = syms[i] if i < len(syms) else "?"
+
+                    imag = "TAK" if freq < 0 else "NIE"
+
                     t.write(f'''
 <a href="{i}.html"
    style="
@@ -458,39 +471,150 @@ def run_hess(tmpdir):
     box-shadow:0 2px 6px rgba(0,0,0,0.15);
     transition:all 0.2s ease;
 ">
-    Wibracja {i+1}
+
+<b>Wibracja {i+1}</b>
+
 </a>
 ''')
+                    
+
+                    mode = modes[i]
+
+                    table_rows = ""
+
+                    for atom_id, atom in enumerate(mode):
+
+                        dx, dy, dz = atom
+
+                        table_rows += f"""
+<tr>
+<td>{atom_id+1}</td>
+<td>{elem[atom_id]}</td>
+<td>{dx:.4f}</td>
+<td>{dy:.4f}</td>
+<td>{dz:.4f}</td>
+</tr>
+"""
+                    
+
                     with open(f"{vib_dir}/{i}.html", 'w', encoding='utf-8') as d:
-                        text = """<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
-                        <a href="javascript:history.back()"
-    style="display:block;
-    width:100%;
-    text-align:center;
-    background:#ef4444;
-    color:white;
-    text-decoration:none;
-    border-radius:8px;
-    padding:16px 0;
-    font-size:18px;
-    font-weight:400;
-    margin-bottom:10px;">
-    Powrot do listy wibracji
+
+                        text = f"""
+<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
+
+<style>
+
+body {{
+    font-family: Arial;
+    margin: 20px;
+}}
+
+.info {{
+    background: #f3f4f6;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}}
+
+table {{
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 15px;
+}}
+
+th, td {{
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}}
+
+th {{
+    background: #e5e7eb;
+}}
+
+</style>
+
+<a href="javascript:history.back()"
+style="
+display:block;
+width:100%;
+text-align:center;
+background:#ef4444;
+color:white;
+text-decoration:none;
+border-radius:8px;
+padding:16px 0;
+font-size:18px;
+font-weight:400;
+margin-bottom:10px;
+">
+Powrot do listy wibracji
 </a>
-  <div id="viewport" style="width:500px; height:500px;"></div>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      var stage = new NGL.Stage("viewport");
-      stage.loadFile( "placeholder", {
-      defaultRepresentation: true, asTrajectory: true } ) .then( function( o ){
-      var traj = o.trajList[0].trajectory;
-      var player = new NGL.TrajectoryPlayer( traj, { } );
-      traj.setPlayer( player );
-      traj.player.play();
-      stage.centerView();
-     });
-    });
-  </script>"""
+
+<div class="info">
+
+<h2>Wibracja {i+1}</h2>
+
+<p><b>Czestotliwosc:</b> {freq:.2f} cm^-1</p>
+
+<p><b>Symetria:</b> {sym}</p>
+
+<p><b>Urojona:</b> {imag}</p>
+
+</div>
+
+<div id="viewport" style="width:700px; height:700px;"></div>
+
+<h3>Przemieszczenia atomowe</h3>
+
+<table>
+
+<tr>
+<th>Atom</th>
+<th>Pierwiastek</th>
+<th>dx</th>
+<th>dy</th>
+<th>dz</th>
+</tr>
+
+{table_rows}
+
+</table>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {{
+
+    var stage = new NGL.Stage("viewport");
+
+    stage.loadFile("vib_{i}.mol2", {{
+        defaultRepresentation: true,
+        asTrajectory: true
+    }}).then(function(o) {{
+
+        var traj = o.trajList[0].trajectory;
+
+        var player = new NGL.TrajectoryPlayer(traj, {{
+            timeout: 80,
+            start: 0,
+            end: traj.numframes,
+            interpolateType: "",
+            mode: "loop"
+        }});
+
+        traj.setPlayer(player);
+
+        traj.player.play();
+
+        stage.centerView();
+
+    }});
+
+}});
+
+</script>
+"""
+
                         if "placeholder" in text:
                             text = text.replace("placeholder", f"vib_{i}.mol2")
                         d.write(text)
