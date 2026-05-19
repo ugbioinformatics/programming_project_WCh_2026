@@ -559,8 +559,56 @@ document
 
 
 <p>
-<a href="/PLIKI/{{post.id}}/vibrations/link_list.html"> Częstości </a>
-  <p><a href="{% url 'post_delete' post.pk %}">+ Usuń post</a></p>
+<a href="/PLIKI/{{post.id}}/vibrations/link_list.html"
+   style="display:inline-block;
+          padding:10px 16px;
+          background:#2563eb;
+          color:white;
+          text-decoration:none;
+          border-radius:8px;">
+    Częstości
+</a>
+
+<p>
+    <a href="{% url 'post_delete' post.pk %}"
+       style="display:inline-block;
+              padding:10px 16px;
+              background:#dc2626;
+              color:white;
+              text-decoration:none;
+              border-radius:8px;">
+        Usuń post
+    </a>
+</p>
+
+
+<script>
+document.addEventListener("scroll", function () {
+    const btn = document.getElementById("topBtn");
+    if (window.scrollY > 200) {
+        btn.style.display = "block";
+    } else {
+        btn.style.display = "none";
+    }
+});
+</script>
+
+<button id="topBtn"
+        onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
+        style="display:none;
+               position:fixed;
+               bottom:20px;
+               right:20px;
+               width:50px;
+               height:50px;
+               border-radius:75%;
+               border:none;
+               background:#2563eb;
+               color:white;
+               font-size:30px;
+                cursor:pointer;">
+    ↑
+</button>
 
 
 </div>

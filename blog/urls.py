@@ -6,7 +6,6 @@ from . import views
 urlpatterns = [
    path("", BlogListView.as_view(), name="home"),
    path("post/", BlogListView.as_view(), name="post_list"),
-   path("accounts/", include("django.contrib.auth.urls")),
    path("post/smiles/", smiles_page, name="smiles_page"),
    path("post/<int:pk>/", BlogDetailView.as_view(), name="post_detail"),
    path("post/suma/", suma, name="suma"),
