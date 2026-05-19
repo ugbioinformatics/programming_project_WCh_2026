@@ -12,17 +12,52 @@
 <button type="submit" class="save btn btn-default">Uruchom</button>
 </form>
 
-</div>
 <form method="POST" action="{% url 'delete_selected' %}">
     {% csrf_token %}
-    <ul>
-    {% for post in post_list %}
-        <li>
-            <h2><input type="checkbox" name="selected_posts" value="{{ post.id }}">
-            <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
-        </li>
-    {% endfor %}
-    </ul>
+
+    <div style="
+        padding: 20px;
+        background: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        overflow: auto;
+        margin-bottom: 10px;
+    ">
+        Lista cząsteczek:
+        <ul style="list-style:none; padding:0; margin:0;">
+
+        {% for post in post_list %}
+            <li style="margin-bottom:10px;">
+
+                <div style="display:flex;
+                            align-items:center;
+                            gap:10px;
+                            width:950px;
+                            height:50px;
+                            background:transparent;
+                            padding:0 10px;
+                            border-radius:6px;">
+
+                    <input type="checkbox" name="selected_posts" value="{{ post.id }}">
+
+                    <a href="{% url 'post_detail' post.pk %}"
+                       style="text-decoration:none;
+                              color:black;
+                              font-weight:bold;">
+                        {{ post.title }}
+                    </a>
+
+                </div>
+
+            </li>
+        {% endfor %}
+
+        </ul>
+
+    </div>
+
+
+
 
     <div>
 
