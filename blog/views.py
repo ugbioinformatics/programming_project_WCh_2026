@@ -59,7 +59,7 @@ def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
 
 def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
     result = subprocess.run(
-        ['/usr/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d', '-Ostart.xyz'],
+        [OBABEL_BIN, f'-:{smiles}', '-oxyz', '--gen3d', '-Ostart.xyz'],
         capture_output=True,
         text=True,
         cwd=tmpdir,
@@ -79,7 +79,7 @@ def smiles_to_xyz(smiles, tmpdir):
     
 def xyz_to_mol2(tmpdir,xyz,mol2):
     result = subprocess.run(
-        ['/usr/bin/obabel', '-ixyz',xyz, '-omol2', '-O'+mol2],
+        [OBABEL_BIN, '-ixyz',xyz, '-omol2', '-O'+mol2],
         capture_output=True,
         text=True,
         cwd=tmpdir,
@@ -106,7 +106,26 @@ def smiles_to_2d_svg(smiles: str) -> str:
 
 
 
-XTB_BIN = '/usr/bin/xtb'
+def get_xtb_path():
+
+    server_path = '/big/appl/xtb-dist/bin/xtb'
+    # Sprawdzamy priorytetową ścieżkę na serwerze
+    if os.path.exists(server_path):
+        return server_path
+   
+    # Jeśli nie jesteśmy na serwerze, zwracamy samą komendę.
+    # subprocess.run samo znajdzie 'xtb' w systemie użytkownika!
+    return 'xtb'
+
+def get_obabel_path():
+    
+    server_path = '/usr/bin/obabel'
+    if os.path.exists(server_path):
+        return server_path
+    return 'obabel'
+
+XTB_BIN = get_xtb_path()
+OBABEL_BIN = get_obabel_path()
 
 
 
@@ -459,7 +478,7 @@ def run_hess(tmpdir):
         frames = play_vib(xyz, mode, elem)
         with open(vib_xyz, 'w') as fh:
             fh.write("".join(frames))
-        subprocess.run(["/usr/bin/obabel", "-ixyz", vib_xyz, "-omol2", "-O", vib_mol2],capture_output=True, cwd=vib_dir)
+        subprocess.run([OBABEL_BIN, "-ixyz", vib_xyz, "-omol2", "-O", vib_mol2],capture_output=True, cwd=vib_dir)
         os.remove(vib_xyz)
         if os.path.exists(vib_mol2):
             mol2_files.append(vib_mol2)
