@@ -12,12 +12,31 @@
   <form action="{% url 'logout' %}" method="post" style="display:inline;">
     {% csrf_token %}
     <button type="submit">
-      Log Out
+      Wyloguj się
     </button>
   </form>
 {% else %}
-  You are not logged in. <a href="{% url 'login' %}">Log In</a>
-  <a href="{% url 'signup' %}">Sign up</a>
+
+  Obecnie nie jesteś zalogowany.
+
+    <a href="{% url 'login' %}"
+       style="display:inline-block;
+              padding:5px 8px;
+              background:Grey;
+              color:white;
+              text-decoration:none;
+              border-radius:8px;">
+        Zaloguj się
+    </a>
+  <a href="{% url 'signup' %}" 
+      style="display:inline-block;
+              padding:5px 8px;
+              background:Orange;
+              color:white;
+              text-decoration:none;
+              border-radius:8px;">
+        Zarejestruj się
+    </a>
 {% endif %}
     <div>
       <header>

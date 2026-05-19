@@ -438,12 +438,69 @@ def run_hess(tmpdir):
             content = f.read().splitlines()[9:]
             with open(f'{vib_dir}/link_list.html', 'w') as t:
                 t.write("<pre>")
+                t.write('''
+<a href="javascript:history.back()"
+    style="display:block;
+    width:100%;
+    text-align:center;
+    background:#ef4444;
+    color:white;
+    text-decoration:none;
+    border-radius:8px;
+    padding:16px 0;
+    font-size:18px;
+    font-weight:400;
+    margin-bottom:10px;">
+    Powrot do posta
+</a>
+''')
                 for i, line in enumerate(content,start=0):
                     if line == "$end":
                         continue
-                    t.write(f'<a href="{i}.html">Wibracja {i+1}</a><br>\n')
+                    t.write(f'''
+<a href="{i}.html"
+   style="
+    display:block;
+    width:100%;
+    box-sizing:border-box;
+
+    text-align:center;
+    background:#3b82f6;
+    color:white;
+    text-decoration:none;
+
+    padding:12px 16px;
+    font-size:16px;
+    font-weight:500;
+
+    margin-bottom:6px;
+    border-radius:8px;
+
+    line-height:1.2;
+
+    box-shadow:0 2px 6px rgba(0,0,0,0.15);
+    transition:all 0.2s ease;
+">
+    Wibracja {i+1}
+</a>
+''')
+                    
                     with open(f"{vib_dir}/{i}.html", 'w') as d:
                         text = """<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
+                        <a href="javascript:history.back()"
+    style="display:block;
+    width:100%;
+    text-align:center;
+    background:#ef4444;
+    color:white;
+    text-decoration:none;
+    border-radius:8px;
+    padding:16px 0;
+    font-size:18px;
+    font-weight:400;
+    margin-bottom:10px;">
+    Powrot do listy wibracji
+</a>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       var stage = new NGL.Stage("viewport");
