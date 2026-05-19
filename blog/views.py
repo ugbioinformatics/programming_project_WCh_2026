@@ -22,7 +22,7 @@ from .models import Post, XTBCalculation
 from .forms import Suma, XTBInputForm
 
 
-# DO USUNIĘCIA??????????????????
+'''
 def runProcess(command, cwd=None, timeout=120):
     try:
         result = subprocess.run(
@@ -36,9 +36,7 @@ def runProcess(command, cwd=None, timeout=120):
 
     except subprocess.TimeoutExpired:
         return False, "", f"timeout expired: {timeout}"
-
-
-
+        Strona działa bez tej funkcji, ale zostawiam, bo moge się mylić'''
 def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
@@ -514,7 +512,6 @@ class BlogListView(ListView):
         context = super().get_context_data(**kwargs)
         context['form'] = Suma()
         return context
-
 
 class BlogDetailView(DetailView):
     model = Post
