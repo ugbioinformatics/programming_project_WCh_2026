@@ -6,46 +6,70 @@
     Source+Sans+Pro:400" rel="stylesheet">
     <link href="{% static 'css/base.css' %}" rel="stylesheet">
   </head>
-  <body>
-  {% if user.is_authenticated %}
-  Hi {{ user.username }}!
-  <form action="{% url 'logout' %}" method="post" style="display:inline;">
-    {% csrf_token %}
-    <button type="submit">
-      Wyloguj się
-    </button>
-  </form>
-{% else %}
+<body>
 
-  Obecnie nie jesteś zalogowany.
+    <header style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-bottom:1px solid #ddd;">
 
+      <div class="nav-left">
+        <h1 style="margin:0;">
+          <a href="{% url 'home' %}" style="text-decoration:none; color:red;">
+            Chemitron 2026
+          </a>
+        </h1>
+      </div>
+
+
+      <div class="nav-right" style="display:flex; align-items:center; gap:10px;">
+
+        {% if user.is_authenticated %}
+
+          <span>Witaj {{ user.username }}!</span>
+
+          <form action="{% url 'logout' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" style="padding:5px 8px; border-radius:8px;; background:#eee;">
+              Wyloguj się
+            </button>
+          </form>
+
+        {% else %}
+
+<div style="display:flex; flex-direction:column; align-items:flex-end;">
+
+  <span>Obecnie nie jesteś zalogowany.</span>
+
+  <div style="display:flex; gap:6px; margin-top:6px;">
     <a href="{% url 'login' %}"
        style="display:inline-block;
-              padding:5px 8px;
-              background:Grey;
+              padding:5px 10px;
+              background:grey;
               color:white;
               text-decoration:none;
               border-radius:8px;">
         Zaloguj się
     </a>
-  <a href="{% url 'signup' %}" 
-      style="display:inline-block;
-              padding:5px 8px;
-              background:Orange;
+
+    <a href="{% url 'signup' %}"
+       style="display:inline-block;
+              padding:5px 10px;
+              background:orange;
               color:white;
               text-decoration:none;
               border-radius:8px;">
         Zarejestruj się
     </a>
-{% endif %}
+  </div>
+
+</div>       {% endif %}
+
+      </div>
+
+    </header>
+
     <div>
-      <header>
-        <div class="nav-left">
-          <h1><a href="{% url 'home' %}">Chemitron 2026</a></h1>
-        </div>
-      </header>
       {% block content %}
       {% endblock content %}
     </div>
+
   </body>
 </html>
