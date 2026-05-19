@@ -10,7 +10,6 @@
 
     <header style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-bottom:1px solid #ddd;">
 
-      <!-- LEWA STRONA -->
       <div class="nav-left">
         <h1 style="margin:0;">
           <a href="{% url 'home' %}" style="text-decoration:none; color:red;">
@@ -19,12 +18,12 @@
         </h1>
       </div>
 
-      <!-- PRAWA STRONA -->
+
       <div class="nav-right" style="display:flex; align-items:center; gap:10px;">
 
         {% if user.is_authenticated %}
 
-          <span>Hi {{ user.username }}!</span>
+          <span>Witaj {{ user.username }}!</span>
 
           <form action="{% url 'logout' %}" method="post" style="display:inline;">
             {% csrf_token %}
