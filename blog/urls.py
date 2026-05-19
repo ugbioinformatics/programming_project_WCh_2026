@@ -1,14 +1,17 @@
-from django.urls import path
-from .views import BlogListView,BlogDetailView,suma,BlogDeleteView,smiles3de,smiles_page
+from django.urls import path, include
+from .views import BlogListView,BlogDetailView,suma,BlogDeleteView,DeleteSelected,smiles3de,smiles_page
 from . import views
 
 
 urlpatterns = [
    path("", BlogListView.as_view(), name="home"),
+   path("post/", BlogListView.as_view(), name="post_list"),
+   path("accounts/", include("django.contrib.auth.urls")),
    path("post/smiles/", smiles_page, name="smiles_page"),
    path("post/<int:pk>/", BlogDetailView.as_view(), name="post_detail"),
    path("post/suma/", suma, name="suma"),
    path("post/<int:pk>/delete/", BlogDeleteView.as_view(), name="post_delete"),
+   path("delete-selected/", views.DeleteSelected.as_view(), name="delete_selected"),
    path("smiles3d/", views.smiles3de, name="smiles3de"),
    path('xtb/', views.xtb_calc_view, name='xtb_calc'),
    path('download-g98/<int:post_id>/', views.download_g98, name='download_g98'),

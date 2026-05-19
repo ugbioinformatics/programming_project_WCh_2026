@@ -1,3 +1,4 @@
+{% extends "base.html" %}
 {% block content %}
 
 {% if molecule_name %}
@@ -21,6 +22,28 @@
          style="width:600px; height:400px; position:relative;">
     </div>
 
+
+    <div id="atomInfoPanel" style="
+      margin-top: 15px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+      font-family: monospace;
+    ">
+      Kliknij atom, aby zobaczyć szczegóły
+    </div>
+      <div id="moleculeInfoPanel" style="
+         margin-top: 15px;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background: #f5f5f5;
+        font-family: monospace;
+        ">
+        Ładowanie danych cząsteczki...
+        </div>
+
   </div>
 
   {{ post.smiles|json_script:"smiles-data" }}
@@ -33,6 +56,8 @@
       const loading = document.getElementById("loading");
       const errorBox = document.getElementById("smilesError");
       const viewerDiv = document.getElementById("smilesViewer");
+      const atomInfoPanel = document.getElementById("atomInfoPanel");
+      const moleculeInfoPanel = document.getElementById("moleculeInfoPanel");
 
       const smiles = JSON.parse(document.getElementById("smiles-data").textContent);
       const url = "{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles);
@@ -42,13 +67,32 @@
       try {
         const res = await fetch(url);
         const data = await res.json();
-
+        const atoms = data.atoms;
         loading.style.display = "none";
 
         if (data.error) {
           errorBox.textContent = data.error;
           return;
         }
+          
+
+        const atomMap = {};
+        atoms.forEach(a => {
+         atomMap[a.idx] = a;
+        });  
+
+          
+        moleculeInfoPanel.innerHTML = `
+         <b>Wzór sumaryczny:</b> ${data.formula}<br>
+         <b>Masa molowa:</b> ${data.molecular_weight} g/mol<br>
+         <b>Liczba ciężkich atomów:</b> ${data.heavy_atoms}<br>
+         <b>Liczba wiązań:</b> ${data.num_bonds}<br>
+         <b>Wiązania rotowalne:</b> ${data.rotatable_bonds}<br>
+         <b>Donory H:</b> ${data.h_donors}<br>
+         <b>Akceptory H:</b> ${data.h_acceptors}<br>
+         <b>TPSA:</b> ${data.tpsa}<br>
+         <b>logP:</b> ${data.logp}
+        `;
 
         const viewer = $3Dmol.createViewer(viewerDiv, {
           backgroundColor: "white"
@@ -61,53 +105,170 @@
           sphere: { scale: 0.28, colorscheme: "CPK" }
         });
 
+        let selectedAtoms = [];
+
         viewer.setClickable({}, true, function(atom) {
+
+            selectedAtoms.push(atom);
+
+
+            if (selectedAtoms.length > 2) {
+              selectedAtoms = [atom];
+            }
+
 
           if (pulseInterval) {
             clearInterval(pulseInterval);
             pulseInterval = null;
           }
-
-          viewer.setStyle({}, {
+            viewer.setStyle({}, {
             stick: { radius: 0.2, colorscheme: "CPK" },
             sphere: { scale: 0.28, colorscheme: "CPK" }
-          });
+            });
+
+            selectedAtoms.forEach(a => {
+              viewer.setStyle({ serial: a.serial }, {
+                stick: { radius: 0.25, colorscheme: "yellowCarbon" },
+                sphere: { scale: 0.35, color: "orange" }
+              });
+            });
+
+viewer.render();
+            
+
+
+
 
           let scale = 0.6;
           let growing = false;
 
-
           pulseInterval = setInterval(() => {
 
-            if (growing) {
-              scale -= 0.08;
-              if (scale <= 0.3) growing = false;
-            } else {
-              scale += 0.08;
-              if (scale >= 0.6) growing = true;
-            }
+            scale += (growing ? -0.08 : 0.08);
+
+            if (scale >= 0.6) growing = true;
+            if (scale <= 0.3) growing = false;
 
             viewer.setStyle({ serial: atom.serial }, {
-              stick: {
-                radius: 0.35,
-                colorscheme: "CPK"
-              },
-              sphere: {
-                scale: scale,
-                colorscheme: "CPK"
-              }
+              stick: { radius: 0.2, colorscheme: "CPK" },
+              sphere: { scale: scale, colorscheme: "CPK" }
             });
 
             viewer.render();
 
           }, 60);
-        });
 
+
+          const element = atom.elem || "unknown";
+
+          const coords = atom.x !== undefined
+            ? `(${atom.x.toFixed(2)}, ${atom.y.toFixed(2)}, ${atom.z.toFixed(2)})`
+            : "brak danych";
+
+          const residue = atom.resn
+            ? `${atom.resn} (resi ${atom.resi ?? "?"})`
+            : "brak (mała cząsteczka)";
+
+          const chain = atom.chain || "brak";
+          const rd = atomMap[atom.serial];
+
+          atomInfoPanel.innerHTML = `
+            <b>Atom:</b> ${element}<br>
+            <b>Serial:</b> ${atom.serial ?? "?"}<br>
+            <b>Pozycja 3D:</b> ${coords}<br>
+
+            <b>Masa:</b> ${rd.mass}<br>
+            <b>Walencyjność:</b> ${rd.valency}<br>
+            <b>Ładunek:</b> ${rd.charge}<br>
+            <b>Hybrydyzacja:</b> ${rd.hybridization}<br>
+            <b>Aromatyczność:</b> ${rd.aromatic}<br>
+            <b>Sąsiedzi:</b> ${rd.neighbors.join(", ")}<br>
+
+            `;
+            if (selectedAtoms.length === 2) {
+
+                const a1 = selectedAtoms[0];
+                const a2 = selectedAtoms[1];
+
+                const dx = a1.x - a2.x;
+                const dy = a1.y - a2.y;
+                const dz = a1.z - a2.z;
+
+                const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+                atomInfoPanel.innerHTML += `
+                    <hr>
+                    <b>Pomiar odległości:</b><br>
+                    Atom 1: ${a1.serial}<br>
+                    Atom 2: ${a2.serial}<br>
+                    <b>Odległość:</b> ${dist.toFixed(3)} Å
+                `;
+                selectedAtoms = [];
+                }
+
+        });
 
         viewer.zoomTo();
         viewer.zoom(1.1);
         viewer.center();
         viewer.render();
+
+
+
+
+
+const surfaceDiv = document.getElementById("surfaceViewer");
+
+const surfaceViewer = $3Dmol.createViewer(surfaceDiv, {
+  backgroundColor: "white"
+});
+
+surfaceViewer.addModel(data.mol_block, "mol");
+
+surfaceViewer.setStyle({}, {
+  stick: {
+    radius: 0.12,
+    colorscheme: "lightgrey"
+  }
+});
+
+const typeMap = {
+  VDW: $3Dmol.SurfaceType.VDW, 
+  SAS: $3Dmol.SurfaceType.SAS, 
+  SES: $3Dmol.SurfaceType.SES  
+};
+
+let currentSurface = null;
+
+function updateSurface(type) {
+
+  if (currentSurface !== null) {
+    surfaceViewer.removeAllSurfaces();
+  }
+
+  currentSurface = surfaceViewer.addSurface(
+    typeMap[type],
+    {
+      opacity: 0.85,
+      color: "lightblue"
+    }
+  );
+
+  surfaceViewer.zoomTo();
+  surfaceViewer.render();
+}
+
+updateSurface("VDW");
+
+document
+  .getElementById("surfaceType")
+  .addEventListener("change", function(e) {
+
+    updateSurface(e.target.value);
+
+  });
+
+
 
       } catch (err) {
         loading.style.display = "none";
@@ -117,13 +278,147 @@
   </script>
 
   {% endif %}
+</div>
 
+<hr>
 
+<h3>Powierzchnia molekularna</h3>
+
+{% if properties %}
+
+<hr>
+
+<h3>Właściwości molekuły</h3>
+
+<div style="
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+">
+
+  <table style="
+    width: 100%;
+    border-collapse: collapse;
+    font-family: monospace;
+  ">
+
+    <tr>
+      <td><strong>Wzór sumaryczny</strong></td>
+      <td>{{ properties.formula }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>Masa molowa</strong></td>
+      <td>{{ properties.mol_weight }} g/mol</td>
+    </tr>
+
+    <tr>
+      <td><strong>Liczba atomów</strong></td>
+      <td>{{ properties.num_atoms }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>Liczba wiązań</strong></td>
+      <td>{{ properties.num_bonds }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>logP</strong></td>
+      <td>{{ properties.logp }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>TPSA</strong></td>
+      <td>{{ properties.tpsa }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>H-bond donors</strong></td>
+      <td>{{ properties.h_donors }}</td>
+    </tr>
+
+    <tr>
+      <td><strong>H-bond acceptors</strong></td>
+      <td>{{ properties.h_acceptors }}</td>
+    </tr>
+
+  </table>
+
+</div>
+
+{% endif %}
+
+<div style="
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+">
+
+  <div style="margin-bottom: 15px;">
+
+    <label for="surfaceType">
+      <strong>Typ powierzchni:</strong>
+    </label>
+
+    <select id="surfaceType" style="
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-left: 10px;
+    ">
+      <option value="VDW">VDW</option>
+      <option value="SAS">SAS</option>
+      <option value="SES">SES</option>
+    </select>
+
+  </div>
+
+  <div id="surfaceViewer"
+       style="
+         width:700px;
+         height:500px;
+         position:relative;
+         border:1px solid #ddd;
+         border-radius:8px;
+         overflow:hidden;
+       ">
+  </div>
+
+</div>
+
+<div class="post-entry">
+
+  {% if svg_2d %}
+
+  <hr>
+
+  <h3>Struktura 2D</h3>
+
+  <div style="
+      display: flex;
+      justify-content: left;
+      align-items: left;
+      padding: 20px;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      overflow: auto;
+  ">
+    <div id="svgContainer">
+      {{ svg_2d|safe }}
+    </div>
+  </div>
+
+  {% endif %}
+
+</div>
     
- <!-- ===== NGL viewer ===== -->
   <script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
   <div id="viewport" style="width:400px; height:300px;"></div>
-
 
   <script>
   document.addEventListener("DOMContentLoaded", function () {
@@ -212,17 +507,60 @@
 
   {% endif %}
 
+  {% if nist_ir %}
+  <hr>
+  <h3>Widmo IR z bazy NIST</h3>
+  <canvas id="nistSpectrum" width="800" height="300"></canvas>
 
-  <p>
-    <a href="{% url 'post_delete' post.pk %}">
-      + Delete Blog Post
-    </a>
-  </p>
+  {{ nist_ir|json_script:"nist-data" }}
 
-<p>{{ post.energy }}</p>  
-<pre>{{ post.optimized_xyz }}</pre>
-<pre>{{post.frequencies}}</pre>
-  <p><a href="{% url 'post_delete' post.pk %}">+ Delete Blog Post</a></p>
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const nistData = JSON.parse(document.getElementById("nist-data").textContent);
+    const ctxNist = document.getElementById('nistSpectrum');
+
+    new Chart(ctxNist, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'NIST Reference IR',
+                data: nistData,
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 2,
+                tension: 0.15,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            scales: {
+          x: {
+            type: 'linear',
+            reverse: true,
+            title: {
+              display: true,
+              text: 'Frequency (cm⁻¹)'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Intensity'
+            }
+            }
+        } }
+    });
+  });
+</script>
+{% endif %}
+
+
+
+
+
+<p>
+<a href="/PLIKI/{{post.id}}/vibrations/link_list.html"> Częstości </a>
+  <p><a href="{% url 'post_delete' post.pk %}">+ Usuń post</a></p>
 
 
 </div>

@@ -4,18 +4,37 @@
 {% include "przycisk_Get_SMAILS.html" %}
 
 <p>
-<form action="post/suma/" method="POST" enctype="multipart/form-data" >
+<form action="{% url 'suma' %}" method="POST" enctype="multipart/form-data" >
                  {% csrf_token %}
                  <table>
                  {{ form.as_table }}
                  </table>
-<button type="submit" class="save btn btn-default">Save & submit</button>
+<button type="submit" class="save btn btn-default">Uruchom</button>
 </form>
 
 </div>
-{% for post in post_list %}
-<div class="post-entry">
-    <h2><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
-</div>
-{% endfor %}
+<form method="POST" action="{% url 'delete_selected' %}">
+    {% csrf_token %}
+    <ul>
+    {% for post in post_list %}
+        <li>
+            <h2><input type="checkbox" name="selected_posts" value="{{ post.id }}">
+            <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
+        </li>
+    {% endfor %}
+    </ul>
+
+    <div>
+
+    <button type="button" onclick="toggleAll()">Zaznacz wszystkie</button>
+    <button type="submit">Usuń zaznaczone</button>
+    </div>
+</form>
+<script>
+function toggleAll() {
+    const checkboxes = document.querySelectorAll('input[name="selected_posts"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+}
+</script>
 {% endblock content %}

@@ -1,5 +1,6 @@
 from django.db import models
 from django.urls import reverse
+from django.contrib.auth.models import User
 
 def user_directory_path(instance, filename):
      # file will be uploaded to MEDIA_ROOT/<id>/plik.pdb
@@ -11,7 +12,8 @@ class Post(models.Model):
 #        "auth.User",
 #        on_delete=models.CASCADE,
 #    )
-    author = models.CharField(max_length=20,default='')
+    author = models.ForeignKey(User,on_delete=models.CASCADE,blank = True, null = True)
+    #author = models.CharField(max_length=20,default='')
     smiles = models.TextField(default='')
     plik1 = models.FileField(default='',upload_to=user_directory_path)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -5,6 +5,7 @@ import requests
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, FileResponse, Http404
+from django.views import View
 from django.views.generic import ListView, DetailView, DeleteView
 from django.views.generic.edit import CreateView, FormMixin
 from django.urls import reverse_lazy
@@ -13,12 +14,15 @@ from django.conf import settings
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem.Draw import rdMolDraw2D
+from rdkit.Chem import Descriptors
+from rdkit.Chem.rdMolDescriptors import CalcMolFormula
+from rdkit.Chem import Lipinski
 
 from .models import Post, XTBCalculation
 from .forms import Suma, XTBInputForm
 
 
-
+# DO USUNIĘCIA??????????????????
 def runProcess(command, cwd=None, timeout=120):
     try:
         result = subprocess.run(
@@ -102,7 +106,7 @@ def smiles_to_2d_svg(smiles: str) -> str:
 
 
 
-XTB_BIN = '/big/appl/xtb-dist/bin/xtb'
+XTB_BIN = '/usr/bin/xtb'
 
 
 
@@ -167,7 +171,55 @@ def read_vibspectrum(tmpdir):
         "freqs": modes,
         "intensities": intensities
     }
-    
+
+def get_nist_ir_data(smiles):
+    """Pobiera dane IR z NIST na podstawie SMILES."""
+    try:
+        # SMILES -> CAS
+        pc_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{requests.utils.quote(smiles)}/synonyms/JSON"
+        pc_res = requests.get(pc_url, timeout=5)
+        cas_number = None
+
+        if pc_res.status_code == 200:
+            synonyms = pc_res.json().get('InformationList', {}).get('Information', [{}])[0].get('Synonym', [])
+            for syn in synonyms:
+                if re.match(r'^\d+-\d+-\d+$', syn):
+                    cas_number = syn.replace("-", "")
+                    break
+
+        if not cas_number:
+            return None
+
+        # plik JDX
+        nist_url = f"https://webbook.nist.gov/cgi/cbook.cgi?JCAMP=C{cas_number}&Index=0&Type=IR"
+        nist_res = requests.get(nist_url, timeout=5)
+
+        if nist_res.status_code != 200 or "##TITLE" not in nist_res.text:
+            return None
+
+        # Parser
+        lines = nist_res.text.splitlines()
+        xy_data = []
+        in_data_block = False
+
+        for line in lines:
+            if "##XYDATA=(X++(Y..Y))" in line:
+                in_data_block = True
+                continue
+            if line.startswith("##") and in_data_block:
+                break
+            if in_data_block:
+                parts = line.split()
+                if len(parts) >= 2:
+                    x = float(parts[0])
+                    y = float(parts[1])
+                    xy_data.append({'x': x, 'y': y})
+
+        return xy_data
+    except Exception as e:
+        print(f"NIST Error: {e}")
+        return None
+
 def run_hess(tmpdir):
     xtbopt_path = os.path.join(tmpdir, 'xtbopt.xyz')
     if not os.path.exists(xtbopt_path):
@@ -204,14 +256,6 @@ def run_hess(tmpdir):
                 except ValueError:
                     pass
 
-    return {
-        "frequencies": frequencies,
-        "has_imaginary": any(f < 0 for f in frequencies),
-        "log": log,
-        "g98_exists": os.path.exists(g98_path),
-        'vibspectrum': vib,
-        'hess_log': hess_log,
-    }
 
     def get_symbol(n):
         s = ["H","He",
@@ -371,6 +415,38 @@ def run_hess(tmpdir):
             frames.append("".join(lines))
         return frames
 
+    def generate_links_vibspec(input_dir, vib_dir):
+        #os.makedirs("htmls")
+        with open(f"{input_dir}", 'r') as f:
+            content = f.read().splitlines()[9:]
+            with open(f'{vib_dir}/link_list.html', 'w') as t:
+                t.write("<pre>")
+                for i, line in enumerate(content,start=0):
+                    if line == "$end":
+                        continue
+                    t.write(f'<a href="{i}.html">Wibracja {i+1}</a><br>\n')
+                    with open(f"{vib_dir}/{i}.html", 'w') as d:
+                        text = """<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var stage = new NGL.Stage("viewport");
+      stage.loadFile( "placeholder", {
+      defaultRepresentation: true, asTrajectory: true } ) .then( function( o ){
+      var traj = o.trajList[0].trajectory;
+      var player = new NGL.TrajectoryPlayer( traj, { } );
+      traj.setPlayer( player );
+      traj.player.play();
+      stage.centerView();
+     });
+    });
+  </script>
+  <div id="viewport" style="width:500px; height:500px;"></div>"""
+                        if "placeholder" in text:
+                            new_text = text.replace("placeholder", f"vib_{i}.mol2")
+                        d.write(new_text)
+                t.write("</pre>")
+
+
     freqs, modes, syms = parse_xtb(g98_path)
     xyz, elem = load_xtb_xyz(g98_path)
 
@@ -388,19 +464,37 @@ def run_hess(tmpdir):
         if os.path.exists(vib_mol2):
             mol2_files.append(vib_mol2)
 
+    index_path = generate_links_vibspec(f"{tmpdir}/vibspectrum", vib_dir)
+
 
     return {
-        'frequencies': frequencies,
-        'hess_log': hess_log,
-        'g98_exists': os.path.exists(g98_path),
+        "frequencies": freqs,
+        "has_imaginary": any(f < 0 for f in frequencies),
+        "log": log,
+        "g98_exists": os.path.exists(g98_path),
+        "vibspectrum": read_vibspectrum(tmpdir),
+        "hess_log": log,
     }
+        #'vibration_index': index_path,
+        #'vibration_dir': vib_dir,
 
 
 
-class BlogListView(FormMixin, ListView):
-    model = Post
-    template_name = "home.html"
-    form_class = Suma
+#form_class = Suma
+
+class BlogListView(ListView):
+     model = Post
+     template_name = "home.html"
+     def get_queryset(self, **kwargs):
+        qs = super().get_queryset(**kwargs)
+        if self.request.user.is_authenticated:
+            return qs.filter(author=self.request.user)
+        else:
+            return qs.filter(author=None)
+     def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = Suma()
+        return context
 
 
 class BlogDetailView(DetailView):
@@ -416,6 +510,18 @@ class BlogDetailView(DetailView):
 
         context["vibspectrum"] = vib
 
+        if post.smiles:
+            context["nist_ir"] = get_nist_ir_data(post.smiles)
+
+        svg_2d = None
+        if post.smiles:
+            try:
+                svg_2d = smiles_to_2d_svg(post.smiles)
+            except Exception:
+                svg_2d = None
+
+        context["svg_2d"] = svg_2d
+
         return context
 
 
@@ -429,6 +535,17 @@ class BlogCreateView(CreateView):
     model = Post
     template_name = "post_new.html"
     fields = ["title", "author", "body"]
+
+class DeleteSelected(View):
+    def post(self, request):
+        ids = request.POST.getlist("selected_posts")
+        posts = Post.objects.filter(id__in=ids)
+        if not ids:
+            return redirect("home")
+        if "confirm" not in request.POST:
+            return render(request, "post_delete.html", {"posts": posts, "selected_ids": ids})
+        posts.delete()
+        return redirect('home')
 
 def xyz_to_smiles(xyz_content: str, tmpdir: str) -> str:
     """Konwertuje XYZ do SMILES przez OpenBabel."""
@@ -465,7 +582,9 @@ def suma(request):
         do_hess = form.cleaned_data.get("do_hess") == True
 
         molecule_name = get_molecule_name(smiles) if smiles else 'Plik XYZ'
-        post = Post(smiles=smiles, title=molecule_name, author="test")
+        post = Post(smiles=smiles, title=molecule_name)
+        if request.user.is_authenticated: # If not authenticated, author = None
+            post.author = request.user
         post.save()
 
         current_post_id = post.id
@@ -474,28 +593,22 @@ def suma(request):
 
         try:
             if plik1:
+
                 post.plik1 = plik1
                 post.save()
+
                 xyz_content = plik1.read().decode('utf-8')
+
                 with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
                     f.write(xyz_content)
 
-                smiles_from_xyz = xyz_to_smiles(xyz_content, tmpdir)
-                molecule_name = get_molecule_name(smiles_from_xyz) if smiles_from_xyz else 'Nieznana cząsteczka'
-                post.title = molecule_name
-                post.save()
             else:
                 submitted_smiles = smiles
-                molecule_name = get_molecule_name(smiles)
-                engine = form.cleaned_data.get('engine', 'obabel')
-                if engine == 'rdkit':
-                    xyz_content = smiles_to_xyz_rdkit(smiles, tmpdir)
-                else:
-                    xyz_content = smiles_to_xyz_obabel(smiles, tmpdir)
+                xyz_content = smiles_to_xyz(smiles, tmpdir)
                 svg_2d = smiles_to_2d_svg(smiles)
 
             log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
-            xyz_to_mol2(tmpdir, 'xtbopt.xyz', 'xtbopt.mol2')
+            xyz_to_mol2(tmpdir,'xtbopt.xyz','xtbopt.mol2')
 
             result_data = {
                 'energy': energy,
@@ -514,7 +627,7 @@ def suma(request):
 
             if do_hess and opt_xyz:
                 hess_data = run_hess(tmpdir)
-                hess_data['has_imaginary'] = any(f < 0 for f in hess_data['frequencies'])
+                hess_data["vibspectrum"] = read_vibspectrum(tmpdir)
                 post.frequencies = hess_data.get("frequencies", [])
                 post.hessian_log = hess_data.get("log", "")
                 post.has_imaginary = hess_data.get("has_imaginary", False)
@@ -573,7 +686,52 @@ def smiles3de(request):
 
         AllChem.UFFOptimizeMolecule(mol)
 
-        return JsonResponse({"mol_block": Chem.MolToMolBlock(mol)})
+        mol_formula = CalcMolFormula(mol)
+
+        mol_weight = round(Descriptors.MolWt(mol), 2)
+
+        heavy_atoms = mol.GetNumHeavyAtoms()
+
+        num_bonds = mol.GetNumBonds()
+
+        rot_bonds = Lipinski.NumRotatableBonds(mol)
+
+        h_donors = Lipinski.NumHDonors(mol)
+
+        h_acceptors = Lipinski.NumHAcceptors(mol)
+
+        tpsa = round(Descriptors.TPSA(mol), 2)
+
+        logp = round(Descriptors.MolLogP(mol), 2)
+        atoms_data = []
+
+        for atom in mol.GetAtoms():
+            atoms_data.append({
+            "idx": atom.GetIdx(),
+            "symbol": atom.GetSymbol(),
+            "mass": round(atom.GetMass(), 3),
+            "valency": atom.GetTotalValence(),
+            "hybridization": str(atom.GetHybridization()),
+            "charge": atom.GetFormalCharge(),
+            "aromatic": atom.GetIsAromatic(),
+            "neighbors": [n.GetIdx() for n in atom.GetNeighbors()],
+    })
+
+        return JsonResponse({
+            "mol_block": Chem.MolToMolBlock(mol),
+
+            "formula": mol_formula,
+            "molecular_weight": mol_weight,
+            "heavy_atoms": heavy_atoms,
+            "num_bonds": num_bonds,
+            "rotatable_bonds": rot_bonds,
+            "h_donors": h_donors,
+            "h_acceptors": h_acceptors,
+            "tpsa": tpsa,
+            "logp": logp,
+
+            "atoms": atoms_data
+        })
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -598,7 +756,10 @@ def xtb_calc_view(request):
             calc = XTBCalculation(input_type=input_type)
 
             try:
-                post = Post(title="XTB", author="test")
+                if request.user.is_authenticated:
+                    post = Post(title="XTB", author=request.user)
+                else:
+                    post = Post(title="XTB", author=None)
                 post.save()
 
                 tmpdir = os.path.join(settings.MEDIA_ROOT, str(post.id))
