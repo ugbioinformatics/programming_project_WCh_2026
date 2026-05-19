@@ -479,7 +479,7 @@ def run_hess(tmpdir):
         #'vibration_dir': vib_dir,
 
 
-
+#do usunięcia???
 #form_class = Suma
 
 class BlogListView(ListView):
