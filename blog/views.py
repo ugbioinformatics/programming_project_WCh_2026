@@ -30,33 +30,54 @@ logger = logging.getLogger(__name__)
 # Wykrywanie ścieżek do binarek — MUSI być przed funkcjami, które ich używają
 # ---------------------------------------------------------------------------
 
-def _get_xtb_path():
-    server_path = '/big/appl/xtb-dist/bin/xtb'
+def _get_xtb_path() -> str:
+    """Zwraca ścieżkę do binarki xtb (serwer lub PATH)."""
+    server_path = getattr(settings, 'XTB_BINARY', '/big/appl/xtb-dist/bin/xtb')
     return server_path if os.path.exists(server_path) else 'xtb'
 
 
-def _get_obabel_path():
-    server_path = '/usr/bin/obabel'
+def _get_obabel_path() -> str:
+    """Zwraca ścieżkę do binarki obabel (serwer lub PATH)."""
+    server_path = getattr(settings, 'OBABEL_BINARY', '/usr/bin/obabel')
     return server_path if os.path.exists(server_path) else 'obabel'
 
 
 XTB_BIN = _get_xtb_path()
 OBABEL_BIN = _get_obabel_path()
 
+# Mapowanie rozszerzeń → format OpenBabel
+# POPRAWKA: obsługa wielu formatów wejściowych (nie tylko .xyz)
+OBABEL_FORMAT_MAP = {
+    '.xyz':  'xyz',
+    '.mol':  'mol',
+    '.mol2': 'mol2',
+    '.sdf':  'sdf',
+    '.pdb':  'pdb',
+    '.cif':  'cif',
+    '.gjf':  'gjf',
+    '.com':  'gjf',   # Gaussian input = format gjf w obabel
+}
+
+
+def get_obabel_format(filename: str) -> str:
+    """Zwraca format OpenBabel na podstawie rozszerzenia pliku."""
+    ext = os.path.splitext(filename.lower())[1]
+    return OBABEL_FORMAT_MAP.get(ext, 'xyz')
+
 
 # ---------------------------------------------------------------------------
-# Konwersja SMILES ↔ XYZ
+# Konwersja SMILES ↔ XYZ / inne formaty → XYZ
 # ---------------------------------------------------------------------------
 
 def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
-    """Alternatywa dla obabel — generuje XYZ przez RDKit (ETKDGv3 + UFF)."""
+    """Generuje XYZ przez RDKit (ETKDGv3 + UFF)."""
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         raise ValueError('Niepoprawny SMILES')
     mol = Chem.AddHs(mol)
     params = AllChem.ETKDGv3()
     if AllChem.EmbedMolecule(mol, params) != 0:
-        raise RuntimeError('Nie udało się wygenerować 3D')
+        raise RuntimeError('Nie udało się wygenerować 3D (RDKit)')
     AllChem.UFFOptimizeMolecule(mol)
     return Chem.MolToXYZBlock(mol)
 
@@ -71,14 +92,57 @@ def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
         timeout=30,
     )
     if result.returncode != 0:
-        raise RuntimeError(result.stderr)
+        raise RuntimeError(f'OpenBabel SMILES→XYZ błąd: {result.stderr}')
     path = os.path.join(tmpdir, 'start.xyz')
-    return open(path, encoding='utf-8').read() if os.path.exists(path) else ''
+    if not os.path.exists(path):
+        raise RuntimeError('OpenBabel nie wygenerował pliku start.xyz')
+    with open(path, encoding='utf-8') as f:
+        return f.read()
 
 
-def smiles_to_xyz(smiles: str, tmpdir: str) -> str:
-    """Domyślna konwersja SMILES → XYZ (używa OpenBabel)."""
+def smiles_to_xyz(smiles: str, tmpdir: str, engine: str = 'obabel') -> str:
+    """
+    Konwertuje SMILES → XYZ.
+    POPRAWKA: przekazywany engine jest teraz faktycznie używany.
+    """
+    if engine == 'rdkit':
+        return smiles_to_xyz_rdkit(smiles, tmpdir)
     return smiles_to_xyz_obabel(smiles, tmpdir)
+
+
+def file_to_xyz(file_content: str, filename: str, tmpdir: str) -> str:
+    """
+    NOWE: Konwertuje dowolny format molekularny do XYZ przez OpenBabel.
+    Obsługiwane formaty: .xyz, .mol, .mol2, .sdf, .pdb, .cif, .gjf/.com
+    """
+    fmt = get_obabel_format(filename)
+    ext = os.path.splitext(filename.lower())[1]
+
+    # Jeśli to już XYZ — zwróć bez konwersji
+    if ext == '.xyz':
+        return file_content
+
+    # Zapisz oryginalny plik
+    src_path = os.path.join(tmpdir, f'input{ext}')
+    with open(src_path, 'w', encoding='utf-8') as f:
+        f.write(file_content)
+
+    result = subprocess.run(
+        [OBABEL_BIN, f'-i{fmt}', src_path, '-oxyz', '-Ostart.xyz'],
+        capture_output=True,
+        text=True,
+        cwd=tmpdir,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f'OpenBabel konwersja {fmt}→xyz błąd: {result.stderr}')
+
+    xyz_path = os.path.join(tmpdir, 'start.xyz')
+    if not os.path.exists(xyz_path):
+        raise RuntimeError(f'OpenBabel nie wygenerował start.xyz z {filename}')
+
+    with open(xyz_path, encoding='utf-8') as f:
+        return f.read()
 
 
 def xyz_to_smiles(xyz_content: str, tmpdir: str) -> str | None:
@@ -160,7 +224,10 @@ def run_xtb(xyz_content: str, tmpdir: str) -> tuple[str, str, float | None]:
         energy = float(match.group(1))
 
     opt_path = os.path.join(tmpdir, 'xtbopt.xyz')
-    opt_xyz = open(opt_path, encoding='utf-8').read() if os.path.exists(opt_path) else ''
+    opt_xyz = ''
+    if os.path.exists(opt_path):
+        with open(opt_path, encoding='utf-8') as f:
+            opt_xyz = f.read()
 
     return log, opt_xyz, energy
 
@@ -284,7 +351,7 @@ class BlogDeleteView(DeleteView):
 class BlogCreateView(CreateView):
     model = Post
     template_name = 'post_new.html'
-    fields = ['title', 'smiles']  # NAPRAWIONE: usunięto nieistniejące pole 'body'
+    fields = ['title', 'smiles']
 
 
 class DeleteSelected(View):
@@ -303,17 +370,22 @@ class DeleteSelected(View):
 # Widok suma() — funkcje pomocnicze
 # ---------------------------------------------------------------------------
 
-def _process_xyz_input(post: Post, plik1, tmpdir: str) -> tuple[str, str | None, str, str | None]:
+def _process_file_input(
+    post: Post, plik1, tmpdir: str
+) -> tuple[str, str | None, str, str | None]:
     """
-    Przetwarza wejście z pliku XYZ.
+    POPRAWKA: obsługuje dowolny format pliku (nie tylko .xyz).
     Zwraca (xyz_content, submitted_smiles, molecule_name, svg_2d).
     """
     plik1.seek(0)
-    xyz_content = plik1.read().decode('utf-8').strip().lstrip('\ufeff')
+    raw_content = plik1.read().decode('utf-8').strip().lstrip('\ufeff')
     plik1.seek(0)
 
     post.plik1 = plik1
     post.save()
+
+    # Konwertuj do XYZ jeśli potrzeba
+    xyz_content = file_to_xyz(raw_content, plik1.name, tmpdir)
 
     with open(os.path.join(tmpdir, 'start.xyz'), 'w', encoding='utf-8') as f:
         f.write(xyz_content)
@@ -330,19 +402,21 @@ def _process_xyz_input(post: Post, plik1, tmpdir: str) -> tuple[str, str | None,
             pass
     else:
         derived_smiles = None
-        molecule_name = 'Plik XYZ'
+        molecule_name = f'Plik {os.path.splitext(plik1.name)[1].upper()}'
 
     post.title = molecule_name
     post.save()
     return xyz_content, derived_smiles, molecule_name, svg_2d
 
 
-def _process_smiles_input(post: Post, smiles: str, tmpdir: str) -> tuple[str, str, str | None]:
+def _process_smiles_input(
+    post: Post, smiles: str, tmpdir: str, engine: str = 'obabel'
+) -> tuple[str, str, str | None]:
     """
-    Przetwarza wejście SMILES.
+    POPRAWKA: engine jest teraz przekazywany do smiles_to_xyz.
     Zwraca (xyz_content, molecule_name, svg_2d).
     """
-    xyz_content = smiles_to_xyz(smiles, tmpdir)
+    xyz_content = smiles_to_xyz(smiles, tmpdir, engine=engine)
     svg_2d = smiles_to_2d_svg(smiles)
     molecule_name = get_molecule_name(smiles)
     post.title = molecule_name
@@ -350,7 +424,13 @@ def _process_smiles_input(post: Post, smiles: str, tmpdir: str) -> tuple[str, st
     return xyz_content, molecule_name, svg_2d
 
 
-def _save_xtb_results(post: Post, xyz_content: str, log: str, opt_xyz: str, energy: float | None) -> None:
+def _save_xtb_results(
+    post: Post,
+    xyz_content: str,
+    log: str,
+    opt_xyz: str,
+    energy: float | None,
+) -> None:
     """Zapisuje wyniki optymalizacji xTB do modelu Post."""
     post.input_xyz = xyz_content
     post.output_log = log
@@ -382,6 +462,9 @@ def suma(request):
         plik1 = form.cleaned_data['plik']
         do_hess = form.cleaned_data.get('do_hess') is True
 
+        # POPRAWKA: pobieramy engine z formularza
+        engine = form.cleaned_data.get('engine', 'obabel')
+
         post = Post(smiles=smiles if smiles else '', title='Przetwarzanie...')
         if request.user.is_authenticated:
             post.author = request.user
@@ -393,12 +476,15 @@ def suma(request):
 
         try:
             if plik1:
-                xyz_content, submitted_smiles, molecule_name, svg_2d = _process_xyz_input(
+                xyz_content, submitted_smiles, molecule_name, svg_2d = _process_file_input(
                     post, plik1, tmpdir
                 )
             else:
                 submitted_smiles = smiles
-                xyz_content, molecule_name, svg_2d = _process_smiles_input(post, smiles, tmpdir)
+                # POPRAWKA: engine przekazywany do _process_smiles_input
+                xyz_content, molecule_name, svg_2d = _process_smiles_input(
+                    post, smiles, tmpdir, engine=engine
+                )
 
             log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
 
@@ -542,14 +628,13 @@ def xtb_calc_view(request):
                     calc.smiles = smiles
                     post.smiles = smiles
                     post.save()
-                    xyz_content = (
-                        smiles_to_xyz_rdkit(smiles, tmpdir)
-                        if engine == 'rdkit'
-                        else smiles_to_xyz_obabel(smiles, tmpdir)
-                    )
+                    # POPRAWKA: engine faktycznie używany
+                    xyz_content = smiles_to_xyz(smiles, tmpdir, engine=engine)
                 else:
-                    file = form.cleaned_data['xyz_file']
-                    xyz_content = file.read().decode('utf-8')
+                    # POPRAWKA: pole molecule_file zamiast xyz_file + konwersja formatów
+                    file = form.cleaned_data['molecule_file']
+                    raw = file.read().decode('utf-8').strip().lstrip('\ufeff')
+                    xyz_content = file_to_xyz(raw, file.name, tmpdir)
 
                 with open(os.path.join(tmpdir, 'start.xyz'), 'w', encoding='utf-8') as f:
                     f.write(xyz_content)
@@ -562,6 +647,7 @@ def xtb_calc_view(request):
                 calc.status = 'done'
 
             except Exception as e:
+                logger.error('xtb_calc_view error: %s', e)
                 calc.output_log = str(e)
                 calc.status = 'error'
 

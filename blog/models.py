@@ -4,9 +4,13 @@ from django.contrib.auth.models import User
 
 
 def user_directory_path(instance, filename):
-    # plik zostanie zapisany do MEDIA_ROOT/<id>/start.xyz
-    return '{0}/{1}'.format(instance.id, 'start.xyz')
-
+    """
+    POPRAWKA: zachowuje oryginalną nazwę pliku (nie nadpisuje na 'start.xyz'),
+    dzięki czemu obsługujemy różne formaty (.mol, .sdf, .pdb itd.).
+    """
+    import os
+    ext = os.path.splitext(filename)[1].lower() or '.xyz'
+    return f'{instance.id}/input{ext}'
 
 class Post(models.Model):
     title = models.CharField(max_length=200)
@@ -16,14 +20,22 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     input_type = models.CharField(
         max_length=10,
-        choices=[('xyz', 'XYZ file'), ('smiles', 'SMILES')],
-        default='SMILES',
+        choices=[
+            ('xyz',   'XYZ file'),
+            ('mol',   'MOL file'),
+            ('mol2',  'MOL2 file'),
+            ('sdf',   'SDF file'),
+            ('pdb',   'PDB file'),
+            ('cif',   'CIF file'),
+            ('smiles', 'SMILES'),
+        ],
+        default='smiles',
     )
-    input_xyz = models.TextField(blank=True, default='')       # zawartość pliku start.xyz
+    input_xyz = models.TextField(blank=True, default='')       # zawartość start.xyz (po konwersji)
     output_log = models.TextField(blank=True, default='')      # stdout z xtb
     optimized_xyz = models.TextField(blank=True, default='')   # xtbopt.xyz po obliczeniach
-    energy = models.FloatField(null=True, blank=True, default=0)  # energia wyciągnięta z logu
-    status = models.CharField(max_length=20, default='pending')   # pending / done / error
+    energy = models.FloatField(null=True, blank=True, default=0)
+    status = models.CharField(max_length=20, default='pending')  # pending / done / error
     frequencies = models.JSONField(blank=True, null=True)
     hessian_log = models.TextField(blank=True, null=True)
     has_imaginary = models.BooleanField(default=False)
@@ -41,13 +53,24 @@ class XTBCalculation(models.Model):
     Przechowuje pojedynczą kalkulację bez powiązania z użytkownikiem.
     """
     created_at = models.DateTimeField(auto_now_add=True)
-    input_type = models.CharField(max_length=10, choices=[('xyz', 'XYZ file'), ('smiles', 'SMILES')])
+    input_type = models.CharField(
+        max_length=10,
+        choices=[
+            ('xyz',   'XYZ file'),
+            ('mol',   'MOL file'),
+            ('mol2',  'MOL2 file'),
+            ('sdf',   'SDF file'),
+            ('pdb',   'PDB file'),
+            ('cif',   'CIF file'),
+            ('smiles', 'SMILES'),
+        ],
+    )
     smiles = models.TextField(blank=True)
     input_xyz = models.TextField(blank=True)
     output_log = models.TextField(blank=True)
     optimized_xyz = models.TextField(blank=True)
     energy = models.FloatField(null=True, blank=True)
-    status = models.CharField(max_length=20, default='pending')  # pending / done / error
+    status = models.CharField(max_length=20, default='pending')
 
     def __str__(self):
         return f'XTB #{self.pk} ({self.status}) {self.created_at:%Y-%m-%d %H:%M}'
