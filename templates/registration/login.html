@@ -1,11 +1,148 @@
 {% extends "base.html" %}
-
-
+{% block title %}Zaloguj się{% endblock %}
 {% block content %}
-  <h2>Zaloguj sie</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
- <button type="submit">Zaloguj sie</button>
-</form>
+
+<style>
+  .auth-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1rem;
+  }
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 2rem 2.2rem;
+    background: #fff;
+  }
+  .auth-card h2 {
+    margin: 0 0 0.3rem 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #111;
+  }
+  .auth-card .auth-subtitle {
+    font-size: 0.875rem;
+    color: #666;
+    margin-bottom: 1.8rem;
+  }
+  .auth-field {
+    margin-bottom: 1.2rem;
+  }
+  .auth-field label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.35rem;
+  }
+  .auth-field input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #111;
+    background: #fafafa;
+    transition: border-color 0.15s;
+  }
+  .auth-field input:focus {
+    outline: none;
+    border-color: #f97316;
+    background: #fff;
+  }
+  .auth-field .errorlist {
+    list-style: none;
+    padding: 0;
+    margin: 0.3rem 0 0 0;
+    font-size: 0.8rem;
+    color: #dc2626;
+  }
+  .auth-nonfield-errors {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.85rem;
+    color: #dc2626;
+    margin-bottom: 1.2rem;
+    list-style: none;
+  }
+  .auth-submit {
+    width: 100%;
+    padding: 0.6rem;
+    background: #6b7280;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: background 0.15s;
+  }
+  .auth-submit:hover {
+    background: #4b5563;
+  }
+  .auth-footer {
+    text-align: center;
+    margin-top: 1.2rem;
+    font-size: 0.85rem;
+    color: #666;
+  }
+  .auth-footer a {
+    color: #f97316;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .auth-footer a:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <h2>Zaloguj się</h2>
+
+    <form method="post">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <ul class="auth-nonfield-errors">
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {% for field in form %}
+      <div class="auth-field">
+        <label for="{{ field.id_for_label }}">
+          {% if field.html_name == "username" %}Nazwa użytkownika
+          {% elif field.html_name == "password" %}Hasło
+          {% else %}{{ field.label }}{% endif %}
+        </label>
+        {{ field }}
+        {% if field.errors %}
+          <ul class="errorlist">
+            {% for error in field.errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="auth-submit">Zaloguj się</button>
+    </form>
+
+    <div class="auth-footer">
+      Nie masz konta? <a href="{% url 'signup' %}">Zarejestruj się</a>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

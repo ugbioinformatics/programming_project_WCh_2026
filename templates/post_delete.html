@@ -1,18 +1,155 @@
 {% extends "base.html" %}
+{% block title %}Usuń{% endblock %}
 {% block content %}
-<h1>Usuwanie</h1>
-<form action="" method="post">{% csrf_token %}
 
-	{% if posts %}
-	<p>Czy na pewno chcesz usunąć te posty: ({{ posts|length }})</p>
-        <ul>
+<style>
+  .delete-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1rem;
+  }
+  .delete-card {
+    width: 100%;
+    max-width: 480px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 2rem 2.2rem;
+    background: #fff;
+  }
+  .delete-card h2 {
+    margin: 0 0 0.3rem 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #111;
+  }
+  .delete-subtitle {
+    font-size: 0.875rem;
+    color: #666;
+    margin-bottom: 1.6rem;
+  }
+  .delete-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.6rem 0;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fef2f2;
+}
+  .delete-list li {
+    padding: 0.55rem 0.9rem;
+    font-size: 0.9rem;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .delete-list li:last-child {
+    border-bottom: none;
+  }
+  .delete-list li::before {
+    content: "·";
+    color: #dc2626;
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+  .delete-single {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.9rem;
+    color: #7f1d1d;
+    margin-bottom: 1.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .delete-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+  .btn-cancel {
+    flex: 1;
+    padding: 0.6rem;
+    background: #fff;
+    color: #555;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.92rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .btn-cancel:hover {
+    background: #f3f4f6;
+  }
+  .btn-delete {
+    flex: 1;
+    padding: 0.6rem;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.92rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-delete:hover {
+    background: #b91c1c;
+  }
+</style>
+
+<div class="delete-wrapper">
+  <div class="delete-card">
+
+    {% if posts %}
+      <h2>Czy na pewno chcesz usunąć te posty:</h2>
+
+      <ul class="delete-list">
         {% for p in posts %}
-            <li>{{ p.title }}</li>
+          <li>
+            {{ p.title }}
             <input type="hidden" name="selected_posts" value="{{ p.id }}">
+          </li>
         {% endfor %}
-        </ul>
-	{% endif %}
+      </ul>
 
-	<input type="submit" name="confirm" value="TAK">
-</form>
+      <form action="" method="post">
+        {% csrf_token %}
+        {% for p in posts %}
+          <input type="hidden" name="selected_posts" value="{{ p.id }}">
+        {% endfor %}
+        <div class="delete-actions">
+          <a href="{% url 'home' %}" class="btn-cancel">Anuluj</a>
+          <button type="submit" name="confirm" class="btn-delete">
+            Usuń {{ posts|length }} {% if posts|length == 1 %}post{% else %}posty{% endif %}
+          </button>
+        </div>
+      </form>
+
+    {% else %}
+      <h2>Czy na pewno chcesz usunąć ten post:</h2>
+
+      <div class="delete-single">
+        „{{ object.title }}"
+      </div>
+
+      <form action="" method="post">
+        {% csrf_token %}
+        <div class="delete-actions">
+          <a href="{% url 'home' %}" class="btn-cancel">Anuluj</a>
+          <button type="submit" class="btn-delete">Usuń post</button>
+        </div>
+      </form>
+
+    {% endif %}
+
+  </div>
+</div>
+
 {% endblock content %}

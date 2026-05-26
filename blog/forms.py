@@ -1,4 +1,34 @@
 from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+
+class PolishUserCreationForm(UserCreationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['username'].help_text = (
+            'Maksymalnie 150 znaków. Tylko litery, cyfry i znaki @/./+/-/_'
+        )
+        self.fields['password1'].help_text = (
+            '<ul>'
+            '<li>Hasło nie może być zbyt podobne do Twoich danych osobowych.</li>'
+            '<li>Hasło musi zawierać co najmniej 8 znaków.</li>'
+            '<li>Hasło nie może być powszechnie używanym hasłem.</li>'
+            '<li>Hasło nie może składać się wyłącznie z cyfr.</li>'
+            '</ul>'
+        )
+        self.fields['password2'].help_text = (
+            'Wprowadź to samo hasło jeszcze raz w celu weryfikacji.'
+        )
+
+        self.fields['username'].label = 'Nazwa użytkownika'
+        self.fields['password1'].label = 'Hasło'
+        self.fields['password2'].label = 'Potwierdzenie hasła'
+
+    class Meta:
+        model = User
+        fields = ['username', 'password1', 'password2']
+
 
 # Obsługiwane rozszerzenia plików wejściowych (poza .xyz)
 ALLOWED_EXTENSIONS = ['.xyz', '.mol', '.mol2', '.sdf', '.pdb', '.cif', '.gjf', '.com']
