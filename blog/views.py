@@ -419,7 +419,7 @@ def run_hess(tmpdir):
 
             with open(f'{vib_dir}/link_list.html', 'w', encoding='utf-8') as t:
 
-                t.write("<pre>")
+                
 
                 t.write('''
 <a href="javascript:history.back()"
@@ -465,6 +465,15 @@ transition:all 0.2s ease;
 </svg>
 </button>
 ''')
+                t.write("""
+<div class="grid" style="
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:10px;
+    max-width:1300px;
+    margin:auto;
+">
+""")
                 
                 for i, line in enumerate(content):
 
@@ -483,8 +492,8 @@ transition:all 0.2s ease;
     width:100%;
     box-sizing:border-box;
     text-align:center;
-    background:#3b82f6;
-    color:white;
+    background:#e5e7eb;
+    color:black;
     text-decoration:none;
     padding:12px 16px;
     font-size:16px;
@@ -499,6 +508,7 @@ transition:all 0.2s ease;
 
 </a>
 ''')
+                    
                     
 
                     mode = modes[i]
@@ -644,7 +654,7 @@ document.addEventListener("DOMContentLoaded", function () {{
                         if "placeholder" in text:
                             text = text.replace("placeholder", f"vib_{i}.mol2")
                         d.write(text)
-                t.write("</pre>")
+        t.write("</div>")
 
     freqs, modes, syms = parse_xtb(g98_path)
     xyz, elem = load_xtb_xyz(g98_path)
