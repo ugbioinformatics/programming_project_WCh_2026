@@ -371,6 +371,28 @@ def generate_links_vibspec(
         
         <a href="javascript:history.back()" class="btn-back">⬅ Powrót do posta</a>
     </div>
+    <button id="topBtn"
+onclick="window.scrollTo({{top:0, behavior:'smooth'}})"
+style="
+position:fixed;
+bottom:20px;
+right:20px;
+width:55px;
+height:55px;
+border:none;
+border-radius:50%;
+background:green;
+cursor:pointer;
+box-shadow:0 4px 10px rgba(0,0,0,0.25);
+z-index:9999;
+display:flex;
+align-items:center;
+justify-content:center;
+">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+    <path d="M12 4l-6 6h4v10h4V10h4z"/>
+    </svg>
+    </button>
 </body>
 </html>
 '''
