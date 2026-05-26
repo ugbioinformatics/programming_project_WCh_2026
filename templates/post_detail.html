@@ -258,7 +258,7 @@
 
   <!-- Powierzchnia molekularna -->
   <div style="flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #fafafa;">
-    <h4 style="margin-top: 0;">Powierzchnia molekularna (po optymalizacji)</h4>
+    <h4 style="margin-top: 0;">Powierzchnia molekularna (przed optymalizacją)</h4>
     <div style="margin-bottom: 10px;">
       <label for="surfaceType"><strong>Typ powierzchni:</strong></label>
       <select id="surfaceType" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; margin-left: 10px;">
@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", function () {
 </div>
 
 <h3>Widmo wibracyjne (IR)</h3>
-<div class="chart-container" style="position: relative; width: 800px; height: 300px;">
+<div class="chart-container" style="position: relative; width: 1300px; height: 300px;">
   <canvas id="irSpectrum"></canvas>
 </div>
 
@@ -348,7 +348,7 @@ document.addEventListener("DOMContentLoaded", function () {
 {% if nist_ir %}
 <hr>
 <h3>Widmo IR z bazy NIST</h3>
-<div class="chart-container" style="position: relative; width: 800px; height: 300px;">
+<div class="chart-container" style="position: relative; width: 1300px; height: 300px;">
   <canvas id="nistSpectrum"></canvas>
 </div>
 {{ nist_ir|json_script:"nist-data" }}
