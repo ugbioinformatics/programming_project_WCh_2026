@@ -1,9 +1,11 @@
 import subprocess
 import os
 import re
+import requests
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, FileResponse, Http404
+from django.views import View
 from django.views.generic import ListView, DetailView, DeleteView
 from django.views.generic.edit import CreateView, FormMixin
 from django.urls import reverse_lazy
@@ -12,10 +14,12 @@ from django.conf import settings
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem.Draw import rdMolDraw2D
+from rdkit.Chem import Descriptors
+from rdkit.Chem.rdMolDescriptors import CalcMolFormula
+from rdkit.Chem import Lipinski
 
 from .models import Post, XTBCalculation
 from .forms import Suma, XTBInputForm
-
 
 
 def runProcess(command, cwd=None, timeout=120):
@@ -28,10 +32,8 @@ def runProcess(command, cwd=None, timeout=120):
             timeout=timeout
         )
         return result.returncode == 0, result.stdout, result.stderr
-
     except subprocess.TimeoutExpired:
         return False, "", f"timeout expired: {timeout}"
-
 
 
 def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
@@ -40,7 +42,6 @@ def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
         raise ValueError("Niepoprawny SMILES")
 
     mol = Chem.AddHs(mol)
-
     params = AllChem.ETKDGv3()
     res = AllChem.EmbedMolecule(mol, params)
 
@@ -51,10 +52,9 @@ def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
     return Chem.MolToXYZBlock(mol)
 
 
-
 def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
     result = subprocess.run(
-        ['/usr/bin/obabel', f'-:{smiles}', '-oxyz', '--gen3d', '-Ostart.xyz'],
+        [OBABEL_BIN, f'-:{smiles}', '-oxyz', '--gen3d', '-Ostart.xyz'],
         capture_output=True,
         text=True,
         cwd=tmpdir,
@@ -65,16 +65,16 @@ def smiles_to_xyz_obabel(smiles: str, tmpdir: str) -> str:
         raise RuntimeError(result.stderr)
 
     path = os.path.join(tmpdir, 'start.xyz')
-    return open(path).read() if os.path.exists(path) else ""
-
+    return open(path, encoding='utf-8').read() if os.path.exists(path) else ""
 
 
 def smiles_to_xyz(smiles, tmpdir):
     return smiles_to_xyz_obabel(smiles, tmpdir)
     
-def xyz_to_mol2(tmpdir,xyz,mol2):
+
+def xyz_to_mol2(tmpdir, xyz, mol2):
     result = subprocess.run(
-        ['/usr/bin/obabel', '-ixyz',xyz, '-omol2', '-O'+mol2],
+        [OBABEL_BIN, '-ixyz', xyz, '-omol2', '-O'+mol2],
         capture_output=True,
         text=True,
         cwd=tmpdir,
@@ -86,13 +86,13 @@ def xyz_to_mol2(tmpdir,xyz,mol2):
 
     return result.stdout
 
+
 def smiles_to_2d_svg(smiles: str) -> str:
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         raise ValueError("Niepoprawny SMILES")
 
     Chem.rdDepictor.Compute2DCoords(mol)
-
     drawer = rdMolDraw2D.MolDraw2DSVG(400, 400)
     drawer.DrawMolecule(mol)
     drawer.FinishDrawing()
@@ -100,18 +100,30 @@ def smiles_to_2d_svg(smiles: str) -> str:
     return drawer.GetDrawingText()
 
 
+def get_xtb_path():
+    server_path = '/big/appl/xtb-dist/bin/xtb'
+    if os.path.exists(server_path):
+        return server_path
+    return 'xtb'
 
-XTB_BIN = '/big/appl/xtb-dist/bin/xtb'
 
+def get_obabel_path():
+    server_path = '/usr/bin/obabel'
+    if os.path.exists(server_path):
+        return server_path
+    return 'obabel'
+
+
+XTB_BIN = get_xtb_path()
+OBABEL_BIN = get_obabel_path()
 
 
 def run_xtb(xyz_content, tmpdir):
     """Uruchamia xtb --opt --gfn2, zwraca (log, opt_xyz, energy)."""
-    # Zapisz startowy plik jeśli nie istnieje
-    xyz_file=os.path.join(tmpdir, 'start.xyz')
+    xyz_file = os.path.join(tmpdir, 'start.xyz')
     if not os.path.exists(xyz_file):
-      with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
-        f.write(xyz_content)
+        with open(xyz_file, 'w', encoding='utf-8') as f:
+            f.write(xyz_content)
 
     result = subprocess.run(
         [XTB_BIN, 'start.xyz', '--opt', '--gfn2'],
@@ -126,29 +138,26 @@ def run_xtb(xyz_content, tmpdir):
         energy = float(match.group(1))
 
     opt_path = os.path.join(tmpdir, 'xtbopt.xyz')
-    opt_xyz = open(opt_path).read() if os.path.exists(opt_path) else ''
+    opt_xyz = open(opt_path, encoding='utf-8').read() if os.path.exists(opt_path) else ''
 
     return log, opt_xyz, energy
 
 
 def read_vibspectrum(tmpdir):
     path = os.path.join(tmpdir, "vibspectrum")
-
     if not os.path.exists(path):
         return None
 
     modes = []
     intensities = []
 
-    with open(path) as f:
+    with open(path, encoding='utf-8') as f:
         for line in f:
             line = line.strip()
-
             if not line or line.startswith("#") or line.startswith("$"):
                 continue
 
             parts = line.split()
-
             if len(parts) >= 4:
                 try:
                     mode = int(parts[0])
@@ -158,7 +167,6 @@ def read_vibspectrum(tmpdir):
                     if freq > 0:
                         modes.append(freq)
                         intensities.append(inten)
-
                 except ValueError:
                     continue
 
@@ -166,44 +174,88 @@ def read_vibspectrum(tmpdir):
         "freqs": modes,
         "intensities": intensities
     }
-    
+
+
+def get_nist_ir_data(smiles):
+    """Pobiera dane IR z NIST na podstawie SMILES."""
+    try:
+        pc_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{requests.utils.quote(smiles)}/synonyms/JSON"
+        pc_res = requests.get(pc_url, timeout=5)
+        cas_number = None
+
+        if pc_res.status_code == 200:
+            synonyms = pc_res.json().get('InformationList', {}).get('Information', [{}])[0].get('Synonym', [])
+            for syn in synonyms:
+                if re.match(r'^\d+-\d+-\d+$', syn):
+                    cas_number = syn.replace("-", "")
+                    break
+
+        if not cas_number:
+            return None
+
+        nist_url = f"https://webbook.nist.gov/cgi/cbook.cgi?JCAMP=C{cas_number}&Index=0&Type=IR"
+        nist_res = requests.get(nist_url, timeout=5)
+
+        if nist_res.status_code != 200 or "##TITLE" not in nist_res.text:
+            return None
+
+        lines = nist_res.text.splitlines()
+        xy_data = []
+        in_data_block = False
+
+        for line in lines:
+            if "##XYDATA=(X++(Y..Y))" in line:
+                in_data_block = True
+                continue
+            if line.startswith("##") and in_data_block:
+                break
+            if in_data_block:
+                parts = line.split()
+                if len(parts) >= 2:
+                    x = float(parts[0])
+                    y = float(parts[1])
+                    xy_data.append({'x': x, 'y': y})
+
+        return xy_data
+    except Exception as e:
+        print(f"NIST Error: {e}")
+        return None
+
+
 def run_hess(tmpdir):
     xtbopt_path = os.path.join(tmpdir, 'xtbopt.xyz')
     if not os.path.exists(xtbopt_path):
-        raise RuntimeError("Brak pliku xtbopt.xyz — optymalizacja nie powiodła się.")
+        raise RuntimeError("Brak xtbopt.xyz")
 
     result = subprocess.run(
-        [XTB_BIN, 'xtbopt.xyz', '--hess'],
+        [XTB_BIN, 'xtbopt.xyz', '--hess', '--g98'],
+        cwd=tmpdir,
         capture_output=True,
         text=True,
-        cwd=tmpdir,
         timeout=300
     )
 
-    hess_log = result.stdout + result.stderr
+    log = result.stdout + result.stderr
 
-    frequencies = []
+    with open(os.path.join(tmpdir, "hess.log"), "w", encoding='utf-8') as f:
+        f.write(log)
+
     g98_path = os.path.join(tmpdir, 'g98.out')
-
+    frequencies = []
     if os.path.exists(g98_path):
-        with open(g98_path) as f:
+        with open(g98_path, encoding='utf-8') as f:
             for line in f:
-                if 'Frequencies --' in line:
-                    parts = line.split('--')[1].split()
-                    for p in parts:
-                        try:
-                            frequencies.append(float(p))
-                        except ValueError:
-                            pass
-                            
-    vib = read_vibspectrum(tmpdir)  
-
-    return {
-        'frequencies': frequencies,
-        'hess_log': hess_log,
-        'g98_exists': os.path.exists(g98_path),
-        'vibspectrum': vib
-    }
+                if "Frequencies --" in line:
+                    freqs = [float(x) for x in line.split()[2:]]
+                    frequencies.extend(freqs)
+    else:
+        for line in log.splitlines():
+            if "eigval :" in line:
+                try:
+                    freqs = [float(x) for x in line.split()[2:]]
+                    frequencies.extend(freqs)
+                except ValueError:
+                    pass
 
     def get_symbol(n):
         s = ["H","He",
@@ -289,7 +341,7 @@ def run_hess(tmpdir):
         flag_1 = "and normal coordinates"
         container = []
         reading = False
-        with open(path) as f:
+        with open(path, encoding='utf-8') as f:
             for line in f:
                 if flag_1 in line:
                     reading = True
@@ -309,7 +361,7 @@ def run_hess(tmpdir):
         have_full_elem = False
         info_collects = []
         this_geom = []
-        with open(path) as f:
+        with open(path, encoding='utf-8') as f:
             for line in f:
                 if flag_1 in line:
                     lab = 1
@@ -330,7 +382,7 @@ def run_hess(tmpdir):
         coor = info_collects[-1]
         natom = len(elem)
         geom_path = os.path.join(tmpdir, 'xtb_geom.xyz')
-        with open(geom_path, 'w') as f1:
+        with open(geom_path, 'w', encoding='utf-8') as f1:
             f1.write(f"{natom}\ntitle\n")
             for i in range(natom):
                 f1.write(f"{elem[i]} {coor[i][0]} {coor[i][1]} {coor[i][2]}\n")
@@ -363,36 +415,283 @@ def run_hess(tmpdir):
             frames.append("".join(lines))
         return frames
 
+    def generate_links_vibspec(input_dir, vib_dir):
+
+        with open(input_dir, 'r', encoding='utf-8') as f:
+
+            content = f.read().splitlines()[9:]
+
+            with open(f'{vib_dir}/link_list.html', 'w', encoding='utf-8') as t:
+
+                t.write("<pre>")
+
+                t.write('''
+<a href="javascript:history.back()"
+style="display:block;
+width:100%;
+text-align:center;
+background:#ef4444;
+color:white;
+text-decoration:none;
+border-radius:8px;
+padding:16px 0;
+font-size:18px;
+font-weight:400;
+margin-bottom:10px;">
+Powrot do posta
+</a>
+''')
+                t.write('''
+                <button id="topBtn"
+onclick="window.scrollTo({top:0, behavior:'smooth'})"
+style="
+display:flex;
+align-items:center;
+justify-content:center;
+
+position:fixed;
+bottom:20px;
+right:20px;
+width:55px;
+height:55px;
+
+border:none;
+border-radius:50%;
+background:green;
+
+cursor:pointer;
+box-shadow:0 4px 10px rgba(0,0,0,0.25);
+z-index:9999;
+transition:all 0.2s ease;
+">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="white" style="display:block;">
+  <path d="M12 4l-6 6h4v10h4V10h4z"/>
+</svg>
+</button>
+''')
+                
+                for i, line in enumerate(content):
+
+                    if line == "$end":
+                        continue
+
+                    freq = freqs[i] if i < len(freqs) else 0.0
+                    sym = syms[i] if i < len(syms) else "?"
+
+                    imag = "TAK" if freq < 0 else "NIE"
+
+                    t.write(f'''
+<a href="{i}.html"
+   style="
+    display:block;
+    width:100%;
+    box-sizing:border-box;
+    text-align:center;
+    background:#e5e7eb;;
+    color:black;
+    text-decoration:none;
+    padding:12px 16px;
+    font-size:16px;
+    font-weight:500;
+    margin-bottom:6px;
+    border-radius:8px;
+    line-height:1.2;
+    box-shadow:0 2px 6px rgba(0,0,0,0.15);
+    transition:all 0.2s ease;
+">
+<b>Wibracja {i+1}</b>
+
+</a>
+''')
+                    
+
+                    mode = modes[i]
+
+                    table_rows = ""
+
+                    for atom_id, atom in enumerate(mode):
+
+                        dx, dy, dz = atom
+
+                        table_rows += f"""
+<tr>
+<td>{atom_id+1}</td>
+<td>{elem[atom_id]}</td>
+<td>{dx:.4f}</td>
+<td>{dy:.4f}</td>
+<td>{dz:.4f}</td>
+</tr>
+"""
+                    
+
+                    with open(f"{vib_dir}/{i}.html", 'w', encoding='utf-8') as d:
+
+                        text = f"""
+<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
+
+<style>
+html {{
+    scroll-behavior: smooth;
+}}
+
+body {{
+    font-family: Arial;
+    margin: 20px;
+}}
+
+.info {{
+    background: #f3f4f6;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}}
+
+table {{
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 15px;
+}}
+
+th, td {{
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}}
+
+th {{
+    background: #e5e7eb;
+}}
+
+</style>
+
+<a href="javascript:history.back()"
+style="
+display:block;
+width:100%;
+text-align:center;
+background:#ef4444;
+color:white;
+text-decoration:none;
+border-radius:8px;
+padding:16px 0;
+font-size:18px;
+font-weight:400;
+margin-bottom:10px;
+">
+Powrot do listy wibracji
+</a>
+
+<div class="info">
+
+<h2>Wibracja {i+1}</h2>
+
+<p><b>Czestotliwosc:</b> {freq:.2f} cm^-1</p>
+
+<p><b>Symetria:</b> {sym}</p>
+
+<p><b>Urojona:</b> {imag}</p>
+
+</div>
+
+<div id="viewport" style="width:700px; height:700px;"></div>
+
+<h3>Przemieszczenia atomowe</h3>
+
+<table>
+
+<tr>
+<th>Atom</th>
+<th>Pierwiastek</th>
+<th>dx</th>
+<th>dy</th>
+<th>dz</th>
+</tr>
+
+{table_rows}
+
+</table>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {{
+
+    var stage = new NGL.Stage("viewport");
+
+    stage.loadFile("vib_{i}.mol2", {{
+        defaultRepresentation: true,
+        asTrajectory: true
+    }}).then(function(o) {{
+
+        var traj = o.trajList[0].trajectory;
+
+        var player = new NGL.TrajectoryPlayer(traj, {{
+            timeout: 80,
+            start: 0,
+            end: traj.numframes,
+            interpolateType: "",
+            mode: "loop"
+        }});
+
+        traj.setPlayer(player);
+
+        traj.player.play();
+
+        stage.centerView();
+
+    }});
+
+}});
+
+</script>
+"""
+
+                        if "placeholder" in text:
+                            text = text.replace("placeholder", f"vib_{i}.mol2")
+                        d.write(text)
+                t.write("</pre>")
+
     freqs, modes, syms = parse_xtb(g98_path)
     xyz, elem = load_xtb_xyz(g98_path)
 
     vib_dir = os.path.join(tmpdir, "vibrations")
-    os.makedirs(vib_dir)
+    os.makedirs(vib_dir, exist_ok=True)
     mol2_files = []
     for i, mode in enumerate(modes):
-        vib_xyz  = f"{vib_dir}/vib_{i}.xyz"
+        vib_xyz = f"{vib_dir}/vib_{i}.xyz"
         vib_mol2 = f"{vib_dir}/vib_{i}.mol2"
         frames = play_vib(xyz, mode, elem)
-        with open(vib_xyz, 'w') as fh:
+        with open(vib_xyz, 'w', encoding='utf-8') as fh:
             fh.write("".join(frames))
-        subprocess.run(["/usr/bin/obabel", "-ixyz", vib_xyz, "-omol2", "-O", vib_mol2],capture_output=True, cwd=vib_dir)
+        subprocess.run([OBABEL_BIN, "-ixyz", vib_xyz, "-omol2", "-O", vib_mol2], capture_output=True, cwd=vib_dir)
         os.remove(vib_xyz)
         if os.path.exists(vib_mol2):
             mol2_files.append(vib_mol2)
 
+    generate_links_vibspec(f"{tmpdir}/vibspectrum", vib_dir)
 
     return {
-        'frequencies': frequencies,
-        'hess_log': hess_log,
-        'g98_exists': os.path.exists(g98_path),
+        "frequencies": freqs,
+        "has_imaginary": any(f < 0 for f in frequencies),
+        "log": log,
+        "g98_exists": os.path.exists(g98_path),
+        "vibspectrum": read_vibspectrum(tmpdir),
+        "hess_log": log,
     }
 
 
-
-class BlogListView(FormMixin, ListView):
+class BlogListView(ListView):
     model = Post
     template_name = "home.html"
-    form_class = Suma
+    def get_queryset(self, **kwargs):
+        qs = super().get_queryset(**kwargs)
+        if self.request.user.is_authenticated:
+            return qs.filter(author=self.request.user)
+        else:
+            return qs.filter(author=None)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = Suma()
+        return context
 
 
 class BlogDetailView(DetailView):
@@ -401,14 +700,17 @@ class BlogDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
         post = self.object
         tmpdir = os.path.join(settings.MEDIA_ROOT, str(post.id))
 
-        vib = read_vibspectrum(tmpdir)
+        context["vibspectrum"] = read_vibspectrum(tmpdir)
 
-        context["vibspectrum"] = vib
-
+        if post.smiles:
+            context["nist_ir"] = get_nist_ir_data(post.smiles)
+            try:
+                context["svg_2d"] = smiles_to_2d_svg(post.smiles)
+            except Exception:
+                context["svg_2d"] = None
         return context
 
 
@@ -424,11 +726,40 @@ class BlogCreateView(CreateView):
     fields = ["title", "author", "body"]
 
 
+class DeleteSelected(View):
+    def post(self, request):
+        ids = request.POST.getlist("selected_posts")
+        posts = Post.objects.filter(id__in=ids)
+        if not ids:
+            return redirect("home")
+        if "confirm" not in request.POST:
+            return render(request, "post_delete.html", {"posts": posts, "selected_ids": ids})
+        posts.delete()
+        return redirect('home')
+
+
+def xyz_to_smiles(xyz_content: str, tmpdir: str) -> str:
+    """Konwertuje XYZ do SMILES przez OpenBabel przy użyciu zmiennej dynamicznej."""
+    xyz_path = os.path.join(tmpdir, 'start.xyz')
+    with open(xyz_path, 'w', encoding='utf-8') as f:
+        f.write(xyz_content)
+
+    result = subprocess.run(
+        [OBABEL_BIN, '-ixyz', xyz_path, '-osmi'],
+        capture_output=True, text=True, timeout=15
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+
+    smiles = result.stdout.strip().split()[0]
+    return smiles
+
 
 def suma(request):
     result_data = None
     hess_data = None
     submitted_smiles = None
+    molecule_name = None
     current_post_id = None
     svg_2d = None
 
@@ -440,9 +771,12 @@ def suma(request):
 
         smiles = form.cleaned_data["smiles"]
         plik1 = form.cleaned_data["plik"]
-        do_hess = bool(form.cleaned_data.get("do_hess", False))
+        do_hess = form.cleaned_data.get("do_hess") == True
 
-        post = Post(smiles=smiles, title='SMILES' if smiles else 'Plik XYZ', author="test")
+        # Tworzymy wstępny obiekt Post (SMILES zostanie nadpisany dynamicznie dla plików XYZ)
+        post = Post(smiles=smiles if smiles else '', title='Przetwarzanie...')
+        if request.user.is_authenticated:
+            post.author = request.user
         post.save()
 
         current_post_id = post.id
@@ -451,25 +785,47 @@ def suma(request):
 
         try:
             if plik1:
-                xyz_content = plik1.read().decode('utf-8')
+                # REKURENCJA FIX: Resetujemy strumień, odcinamy puste linie oraz znacznik BOM Windows
+                plik1.seek(0)
+                xyz_content = plik1.read().decode('utf-8').strip().lstrip('\ufeff')
+                plik1.seek(0)
+                
                 post.plik1 = plik1
                 post.save()
 
-                with open(os.path.join(tmpdir, 'start.xyz'), 'w') as f:
+                with open(os.path.join(tmpdir, 'start.xyz'), 'w', encoding='utf-8') as f:
                     f.write(xyz_content)
-            else:
-                submitted_smiles = smiles
-                engine = form.cleaned_data.get('engine', 'obabel')
 
-                if engine == 'rdkit':
-                    xyz_content = smiles_to_xyz_rdkit(smiles, tmpdir)
+                # UNIFIKACJA DLA XYZ: Przekształcamy XYZ na SMILES, aby odblokować te same analizy!
+                derived_smiles = xyz_to_smiles(xyz_content, tmpdir)
+                if derived_smiles:
+                    post.smiles = derived_smiles
+                    submitted_smiles = derived_smiles
+                    molecule_name = get_molecule_name(derived_smiles)
+                    try:
+                        svg_2d = smiles_to_2d_svg(derived_smiles)
+                    except Exception:
+                        svg_2d = None
                 else:
-                    xyz_content = smiles_to_xyz_obabel(smiles, tmpdir)
-
+                    molecule_name = 'Plik XYZ'
+                
+                post.title = molecule_name
+                post.save()
+            else:
+                # Tradycyjna ścieżka dla podanego SMILES
+                submitted_smiles = smiles
+                xyz_content = smiles_to_xyz(smiles, tmpdir)
                 svg_2d = smiles_to_2d_svg(smiles)
+                molecule_name = get_molecule_name(smiles)
+                post.title = molecule_name
+                post.save()
 
+            # Wykonanie obliczeń xTB
             log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
-            xyz_to_mol2(tmpdir, 'xtbopt.xyz', 'xtbopt.mol2')
+            
+            # ZABEZPIECZENIE: Uruchamiaj obabel tylko wtedy, gdy plik geometrii optymalnej faktycznie powstał
+            if opt_xyz and os.path.exists(os.path.join(tmpdir, 'xtbopt.xyz')):
+                xyz_to_mol2(tmpdir, 'xtbopt.xyz', 'xtbopt.mol2')
 
             result_data = {
                 'energy': energy,
@@ -488,25 +844,38 @@ def suma(request):
 
             if do_hess and opt_xyz:
                 hess_data = run_hess(tmpdir)
-                hess_data['has_imaginary'] = any(f < 0 for f in hess_data['frequencies'])
-
+                hess_data["vibspectrum"] = read_vibspectrum(tmpdir)
+                
+                post.frequencies = hess_data.get("frequencies", [])
+                post.hessian_log = hess_data.get("log", "")
+                post.has_imaginary = hess_data.get("has_imaginary", False)
+                post.save()
+                
         except Exception as e:
-            result_data = {'status': 'error', 'log': str(e)}
+            err_msg = str(e)
+            if result_data is None:
+                result_data = {'status': 'error', 'log': err_msg}
+            else:
+                hess_data = {"error": err_msg}
+            post.status = 'error'
+            post.output_log = f"Error: {err_msg}"
+            post.save()
 
     else:
         form = Suma()
 
+    # KOREKTA WCIĘCIA: return render() musi znajdować się całkowicie poza blokami if/else żądania POST/GET
     post_list = Post.objects.all().order_by('-id')[:10]
 
     return render(request, 'suma.html', {
         'form': form,
         'result_data': result_data,
         'hess_data': hess_data,
-        'submitted_smiles': submitted_smiles,
+        'submitted_smiles': submitted_smiles if submitted_smiles else (post.smiles if 'post' in locals() and post.smiles else None),
+        'molecule_name': molecule_name,
         'post_list': post_list,
         'post_id': current_post_id,
     })
-
 
 
 def download_g98(request, post_id):
@@ -520,10 +889,8 @@ def download_g98(request, post_id):
     raise Http404("Plik g98.out nie istnieje.")
 
 
-
 def smiles3de(request):
     smiles = request.GET.get('smiles')
-
     if not smiles:
         return JsonResponse({'error': 'Brak SMILES'}, status=400)
 
@@ -533,21 +900,53 @@ def smiles3de(request):
             return JsonResponse({'error': 'Niepoprawny SMILES'}, status=400)
 
         mol = Chem.AddHs(mol)
-
         if AllChem.EmbedMolecule(mol, AllChem.ETKDG()) != 0:
             return JsonResponse({'error': 'Nie udało się wygenerować 3D'}, status=500)
 
         AllChem.UFFOptimizeMolecule(mol)
 
-        return JsonResponse({"mol_block": Chem.MolToMolBlock(mol)})
+        mol_formula = CalcMolFormula(mol)
+        mol_weight = round(Descriptors.MolWt(mol), 2)
+        heavy_atoms = mol.GetNumHeavyAtoms()
+        num_bonds = mol.GetNumBonds()
+        rot_bonds = Lipinski.NumRotatableBonds(mol)
+        h_donors = Lipinski.NumHDonors(mol)
+        h_acceptors = Lipinski.NumHAcceptors(mol)
+        tpsa = round(Descriptors.TPSA(mol), 2)
+        logp = round(Descriptors.MolLogP(mol), 2)
+        
+        atoms_data = []
+        for atom in mol.GetAtoms():
+            atoms_data.append({
+                "idx": atom.GetIdx(),
+                "symbol": atom.GetSymbol(),
+                "mass": round(atom.GetMass(), 3),
+                "valency": atom.GetTotalValence(),
+                "hybridization": str(atom.GetHybridization()),
+                "charge": atom.GetFormalCharge(),
+                "aromatic": atom.GetIsAromatic(),
+                "neighbors": [n.GetIdx() for n in atom.GetNeighbors()],
+            })
 
+        return JsonResponse({
+            "mol_block": Chem.MolToMolBlock(mol),
+            "formula": mol_formula,
+            "molecular_weight": mol_weight,
+            "heavy_atoms": heavy_atoms,
+            "num_bonds": num_bonds,
+            "rotatable_bonds": rot_bonds,
+            "h_donors": h_donors,
+            "h_acceptors": h_acceptors,
+            "tpsa": tpsa,
+            "logp": logp,
+            "atoms": atoms_data
+        })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
 
 def smiles_page(request):
     return render(request, 'smiles.html')
-
 
 
 def xtb_calc_view(request):
@@ -560,11 +959,13 @@ def xtb_calc_view(request):
         if form.is_valid():
             input_type = form.cleaned_data['input_type']
             engine = form.cleaned_data['engine']
-
             calc = XTBCalculation(input_type=input_type)
 
             try:
-                post = Post(title="XTB", author="test")
+                if request.user.is_authenticated:
+                    post = Post(title="XTB", author=request.user)
+                else:
+                    post = Post(title="XTB", author=None)
                 post.save()
 
                 tmpdir = os.path.join(settings.MEDIA_ROOT, str(post.id))
@@ -573,7 +974,6 @@ def xtb_calc_view(request):
                 if input_type == 'smiles':
                     smiles = form.cleaned_data['smiles']
                     calc.smiles = smiles
-
                     post.smiles = smiles
                     post.save()
 
@@ -581,17 +981,15 @@ def xtb_calc_view(request):
                         xyz_content = smiles_to_xyz_rdkit(smiles, tmpdir)
                     else:
                         xyz_content = smiles_to_xyz_obabel(smiles, tmpdir)
-
                 else:
                     file = form.cleaned_data['xyz_file']
                     xyz_content = file.read().decode('utf-8')
 
                 xyz_path = os.path.join(tmpdir, "start.xyz")
-                with open(xyz_path, "w") as f:
+                with open(xyz_path, "w", encoding='utf-8') as f:
                     f.write(xyz_content)
 
                 calc.input_xyz = xyz_content
-
                 log, opt_xyz, energy = run_xtb(xyz_content, tmpdir)
 
                 calc.output_log = log
@@ -606,3 +1004,17 @@ def xtb_calc_view(request):
             calc.save()
 
     return render(request, 'xtb_calc.html', {'form': form, 'calc': calc})
+
+
+def get_molecule_name(smiles: str) -> str:
+    """Pobiera nazwę cząsteczki z PubChem na podstawie SMILES."""
+    try:
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{requests.utils.quote(smiles)}/property/IUPACName,Title/JSON"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            props = data['PropertyTable']['Properties'][0]
+            return props.get('Title') or props.get('IUPACName') or smiles
+    except Exception:
+        pass
+    return smiles

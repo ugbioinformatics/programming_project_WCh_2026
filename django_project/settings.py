@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -129,3 +130,7 @@ import os
 MEDIA_URL = '/PLIKI/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'PLIKI/')
 
+LOGIN_REDIRECT_URL = "/post"
+LOGOUT_REDIRECT_URL = "/"
+
+LANGUAGE_CODE = 'pl'

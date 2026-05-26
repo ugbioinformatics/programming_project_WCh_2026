@@ -1,4 +1,11 @@
+{% extends "base.html" %}
 {% block content %}
+
+{% if molecule_name %}
+<div style="margin: 15px 0; padding: 12px 20px; background: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;">
+  <h2 style="margin: 0; color: #1565C0;">{{ molecule_name }}</h2>
+</div>
+{% endif %}
 
 <div class="post-entry">
 
@@ -15,6 +22,27 @@
          style="width:600px; height:400px; position:relative;">
     </div>
 
+    <div id="atomInfoPanel" style="
+      margin-top: 15px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+      font-family: monospace;
+    ">
+      Kliknij atom, aby zobaczyć szczegóły
+    </div>
+    <div id="moleculeInfoPanel" style="
+       margin-top: 15px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #f5f5f5;
+      font-family: monospace;
+      ">
+      Ładowanie danych cząsteczki...
+    </div>
+
   </div>
 
   {{ post.smiles|json_script:"smiles-data" }}
@@ -27,6 +55,8 @@
       const loading = document.getElementById("loading");
       const errorBox = document.getElementById("smilesError");
       const viewerDiv = document.getElementById("smilesViewer");
+      const atomInfoPanel = document.getElementById("atomInfoPanel");
+      const moleculeInfoPanel = document.getElementById("moleculeInfoPanel");
 
       const smiles = JSON.parse(document.getElementById("smiles-data").textContent);
       const url = "{% url 'smiles3de' %}?smiles=" + encodeURIComponent(smiles);
@@ -36,13 +66,30 @@
       try {
         const res = await fetch(url);
         const data = await res.json();
-
+        const atoms = data.atoms;
         loading.style.display = "none";
 
         if (data.error) {
           errorBox.textContent = data.error;
           return;
         }
+
+        const atomMap = {};
+        atoms.forEach(a => {
+         atomMap[a.idx] = a;
+        });
+
+        moleculeInfoPanel.innerHTML = `
+         <b>Wzór sumaryczny:</b> ${data.formula}<br>
+         <b>Masa molowa:</b> ${data.molecular_weight} g/mol<br>
+         <b>Liczba ciężkich atomów:</b> ${data.heavy_atoms}<br>
+         <b>Liczba wiązań:</b> ${data.num_bonds}<br>
+         <b>Wiązania rotowalne:</b> ${data.rotatable_bonds}<br>
+         <b>Donory H:</b> ${data.h_donors}<br>
+         <b>Akceptory H:</b> ${data.h_acceptors}<br>
+         <b>TPSA:</b> ${data.tpsa}<br>
+         <b>logP:</b> ${data.logp}
+        `;
 
         const viewer = $3Dmol.createViewer(viewerDiv, {
           backgroundColor: "white"
@@ -55,7 +102,15 @@
           sphere: { scale: 0.28, colorscheme: "CPK" }
         });
 
+        let selectedAtoms = [];
+
         viewer.setClickable({}, true, function(atom) {
+
+          selectedAtoms.push(atom);
+
+          if (selectedAtoms.length > 2) {
+            selectedAtoms = [atom];
+          }
 
           if (pulseInterval) {
             clearInterval(pulseInterval);
@@ -67,41 +122,105 @@
             sphere: { scale: 0.28, colorscheme: "CPK" }
           });
 
+          selectedAtoms.forEach(a => {
+            viewer.setStyle({ serial: a.serial }, {
+              stick: { radius: 0.25, colorscheme: "yellowCarbon" },
+              sphere: { scale: 0.35, color: "orange" }
+            });
+          });
+
+          viewer.render();
+
           let scale = 0.6;
           let growing = false;
 
-
           pulseInterval = setInterval(() => {
-
-            if (growing) {
-              scale -= 0.08;
-              if (scale <= 0.3) growing = false;
-            } else {
-              scale += 0.08;
-              if (scale >= 0.6) growing = true;
-            }
-
+            scale += (growing ? -0.08 : 0.08);
+            if (scale >= 0.6) growing = true;
+            if (scale <= 0.3) growing = false;
             viewer.setStyle({ serial: atom.serial }, {
-              stick: {
-                radius: 0.35,
-                colorscheme: "CPK"
-              },
-              sphere: {
-                scale: scale,
-                colorscheme: "CPK"
-              }
+              stick: { radius: 0.2, colorscheme: "CPK" },
+              sphere: { scale: scale, colorscheme: "CPK" }
             });
-
             viewer.render();
-
           }, 60);
-        });
 
+          const element = atom.elem || "unknown";
+
+          const coords = atom.x !== undefined
+            ? `(${atom.x.toFixed(2)}, ${atom.y.toFixed(2)}, ${atom.z.toFixed(2)})`
+            : "brak danych";
+
+          const residue = atom.resn
+            ? `${atom.resn} (resi ${atom.resi ?? "?"})`
+            : "brak (mała cząsteczka)";
+
+          const chain = atom.chain || "brak";
+          const rd = atomMap[atom.serial];
+
+          atomInfoPanel.innerHTML = `
+            <b>Atom:</b> ${element}<br>
+            <b>Serial:</b> ${atom.serial ?? "?"}<br>
+            <b>Pozycja 3D:</b> ${coords}<br>
+            <b>Masa:</b> ${rd.mass}<br>
+            <b>Walencyjność:</b> ${rd.valency}<br>
+            <b>Ładunek:</b> ${rd.charge}<br>
+            <b>Hybrydyzacja:</b> ${rd.hybridization}<br>
+            <b>Aromatyczność:</b> ${rd.aromatic}<br>
+            <b>Sąsiedzi:</b> ${rd.neighbors.join(", ")}<br>
+          `;
+
+          if (selectedAtoms.length === 2) {
+            const a1 = selectedAtoms[0];
+            const a2 = selectedAtoms[1];
+            const dx = a1.x - a2.x;
+            const dy = a1.y - a2.y;
+            const dz = a1.z - a2.z;
+            const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            atomInfoPanel.innerHTML += `
+              <hr>
+              <b>Pomiar odległości:</b><br>
+              Atom 1: ${a1.serial}<br>
+              Atom 2: ${a2.serial}<br>
+              <b>Odległość:</b> ${dist.toFixed(3)} Å
+            `;
+            selectedAtoms = [];
+          }
+        });
 
         viewer.zoomTo();
         viewer.zoom(1.1);
         viewer.center();
         viewer.render();
+
+        // Surface viewer
+        const surfaceDiv = document.getElementById("surfaceViewer");
+        const surfaceViewer = $3Dmol.createViewer(surfaceDiv, { backgroundColor: "white" });
+        surfaceViewer.addModel(data.mol_block, "mol");
+        surfaceViewer.setStyle({}, {
+          stick: { radius: 0.12, colorscheme: "lightgrey" }
+        });
+
+        const typeMap = {
+          VDW: $3Dmol.SurfaceType.VDW,
+          SAS: $3Dmol.SurfaceType.SAS,
+          SES: $3Dmol.SurfaceType.SES
+        };
+
+        let currentSurface = null;
+
+        function updateSurface(type) {
+          if (currentSurface !== null) surfaceViewer.removeAllSurfaces();
+          currentSurface = surfaceViewer.addSurface(typeMap[type], { opacity: 0.85, color: "lightblue" });
+          surfaceViewer.zoomTo();
+          surfaceViewer.render();
+        }
+
+        updateSurface("VDW");
+
+        document.getElementById("surfaceType").addEventListener("change", function(e) {
+          updateSurface(e.target.value);
+        });
 
       } catch (err) {
         loading.style.display = "none";
@@ -111,106 +230,191 @@
   </script>
 
   {% endif %}
+</div>
 
+<hr>
 
-    
- <!-- ===== NGL viewer ===== -->
-  <script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
-  <div id="viewport" style="width:400px; height:300px;"></div>
+{% if properties %}
+<h3>Właściwości molekuły</h3>
+<div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa;">
+  <table style="width: 100%; border-collapse: collapse; font-family: monospace;">
+    <tr><td><strong>Wzór sumaryczny</strong></td><td>{{ properties.formula }}</td></tr>
+    <tr><td><strong>Masa molowa</strong></td><td>{{ properties.mol_weight }} g/mol</td></tr>
+    <tr><td><strong>Liczba atomów</strong></td><td>{{ properties.num_atoms }}</td></tr>
+    <tr><td><strong>Liczba wiązań</strong></td><td>{{ properties.num_bonds }}</td></tr>
+    <tr><td><strong>logP</strong></td><td>{{ properties.logp }}</td></tr>
+    <tr><td><strong>TPSA</strong></td><td>{{ properties.tpsa }}</td></tr>
+    <tr><td><strong>H-bond donors</strong></td><td>{{ properties.h_donors }}</td></tr>
+    <tr><td><strong>H-bond acceptors</strong></td><td>{{ properties.h_acceptors }}</td></tr>
+  </table>
+</div>
+{% endif %}
 
-  <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    var stage = new NGL.Stage("viewport");
-    stage.loadFile("/PLIKI/{{post.id}}/xtbopt.mol2", {defaultRepresentation: true});
-  });
-  </script>
+<!-- Trzy wizualizacje obok siebie -->
+<hr>
+<h3>Wizualizacje</h3>
 
+<div style="display: flex; gap: 20px; align-items: flex-start; margin: 20px 0;">
 
-  <p><strong>Energia:</strong> {{ post.energy }}</p>
+  <!-- Powierzchnia molekularna -->
+  <div style="flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #fafafa;">
+    <h4 style="margin-top: 0;">Powierzchnia molekularna (przed optymalizacją)</h4>
+    <div style="margin-bottom: 10px;">
+      <label for="surfaceType"><strong>Typ powierzchni:</strong></label>
+      <select id="surfaceType" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; margin-left: 10px;">
+        <option value="VDW">VDW</option>
+        <option value="SAS">SAS</option>
+        <option value="SES">SES</option>
+      </select>
+    </div>
+    <div id="surfaceViewer" style="width:100%; height:355px; position:relative; border:1px solid #ddd; border-radius:8px; overflow:hidden;"></div>
+  </div>
 
-  <pre>{{ post.optimized_xyz }}</pre>
+  <!-- Struktura 2D -->
+  <div style="flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #fafafa;">
+    <h4 style="margin-top: 0;">Struktura 2D</h4>
+    {% if svg_2d %}
+    <div id="svgContainer" style="display:flex; justify-content:center; align-items:center; height:400px; overflow:auto;">
+      {{ svg_2d|safe }}
+    </div>
+    {% else %}
+    <p style="color:#999;">Brak struktury 2D</p>
+    {% endif %}
+  </div>
 
+  <!-- Struktura 3D (NGL) -->
+  <div style="flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #fafafa;">
+    <h4 style="margin-top: 0;">Struktura 3D (po optymalizacji)</h4>
+    <div id="viewport" style="width:100%; height:400px;"></div>
+  </div>
 
-  {% if vibspectrum %}
-  <hr>
+</div>
 
-  <h3>Widmo wibracyjne (IR)</h3>
+<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var stage = new NGL.Stage("viewport");
+  stage.loadFile("/PLIKI/{{post.id}}/xtbopt.mol2", {defaultRepresentation: true});
+});
+</script>
 
-  <canvas id="irSpectrum" width="800" height="300"></canvas>
+<p><strong>Energia:</strong> {{ post.energy }}</p>
+<pre>{{ post.optimized_xyz }}</pre>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% if vibspectrum %}
+<hr>
+<div style="margin: 20px 0;">
+  <label for="canvasSize"><strong>Wysokość wykresów:</strong></label>
+  <input type="range" id="canvasSize" min="200" max="400" value="300" style="vertical-align: middle; margin-left: 10px;">
+</div>
 
-  {{ vibspectrum.freqs|json_script:"freqs-data" }}
-  {{ vibspectrum.intensities|json_script:"intens-data" }}
+<h3>Widmo wibracyjne (IR)</h3>
+<div class="chart-container" style="position: relative; width: 1300px; height: 300px;">
+  <canvas id="irSpectrum"></canvas>
+</div>
 
-  <script>
-  document.addEventListener("DOMContentLoaded", function () {
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ vibspectrum.freqs|json_script:"freqs-data" }}
+{{ vibspectrum.intensities|json_script:"intens-data" }}
 
-    const freqs = JSON.parse(document.getElementById("freqs-data").textContent);
-    const intens = JSON.parse(document.getElementById("intens-data").textContent);
-
-    const sigma = 20;
-    const minX = 0;
-    const maxX = 4000;
-    const step = 2;
-
-    const spectrum = [];
-
-    for (let x = minX; x <= maxX; x += step) {
-      let y = 0;
-
-      for (let i = 0; i < freqs.length; i++) {
-        y += intens[i] * Math.exp(-Math.pow(x - freqs[i], 2) / (2 * sigma * sigma));
-      }
-
-      spectrum.push({ x: x, y: y });
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const freqs = JSON.parse(document.getElementById("freqs-data").textContent);
+  const intens = JSON.parse(document.getElementById("intens-data").textContent);
+  const sigma = 20;
+  const spectrum = [];
+  for (let x = 0; x <= 4000; x += 2) {
+    let y = 0;
+    for (let i = 0; i < freqs.length; i++) {
+      y += intens[i] * Math.exp(-Math.pow(x - freqs[i], 2) / (2 * sigma * sigma));
     }
-
-    const ctx = document.getElementById('irSpectrum');
-
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: 'IR spectrum',
-          data: spectrum,
-          borderWidth: 2,
-          tension: 0.15,
-          pointRadius: 0
-        }]
-      },
-      options: {
-        scales: {
-          x: {
-            type: 'linear',
-            reverse: true,
-            title: {
-              display: true,
-              text: 'Frequency (cm⁻¹)'
-            }
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Intensity'
-            }
-          }
-        }
+    spectrum.push({ x: x, y: y });
+  }
+  window.irChart = new Chart(document.getElementById('irSpectrum'), {
+    type: 'line',
+    data: { datasets: [{ label: 'IR spectrum', data: spectrum, borderWidth: 2, tension: 0.15, pointRadius: 0 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { type: 'linear', reverse: true },
+        y: { beginAtZero: true }
       }
-    });
-
+    }
   });
-  </script>
+});
+</script>
 
-  {% endif %}
+{% if nist_ir %}
+<hr>
+<h3>Widmo IR z bazy NIST</h3>
+<div class="chart-container" style="position: relative; width: 1300px; height: 300px;">
+  <canvas id="nistSpectrum"></canvas>
+</div>
+{{ nist_ir|json_script:"nist-data" }}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const nistData = JSON.parse(document.getElementById("nist-data").textContent);
+  window.nistChart = new Chart(document.getElementById('nistSpectrum'), {
+    type: 'line',
+    data: { datasets: [{ label: 'NIST Reference IR', data: nistData, borderColor: 'rgba(255, 99, 132, 1)', borderWidth: 2, tension: 0.15, pointRadius: 0 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { type: 'linear', reverse: true, min: 0 },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+});
+</script>
+{% endif %}
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const slider = document.getElementById("canvasSize");
+  if (slider) {
+    slider.addEventListener("input", function () {
+      const h = this.value + "px";
+      const irCanvas = document.getElementById("irSpectrum");
+      const nistCanvas = document.getElementById("nistSpectrum");
+      if (irCanvas) irCanvas.parentElement.style.height = h;
+      if (nistCanvas) nistCanvas.parentElement.style.height = h;
+      if (window.irChart) window.irChart.resize();
+      if (window.nistChart) window.nistChart.resize();
+    });
+  }
+});
+</script>
 
-  <p>
-    <a href="{% url 'post_delete' post.pk %}">
-      + Delete Blog Post
-    </a>
-  </p>
+<p>
+  <a href="/PLIKI/{{post.id}}/vibrations/link_list.html"
+     style="display:inline-block; padding:10px 16px; background:#2563eb; color:white; text-decoration:none; border-radius:8px;">
+    Częstości
+  </a>
+</p>
+{% endif %}
+
+<p>
+  <a href="{% url 'post_delete' post.pk %}"
+     style="display:inline-block; padding:10px 16px; background:#dc2626; color:white; text-decoration:none; border-radius:8px;">
+    Usuń post
+  </a>
+</p>
+
+<script>
+document.addEventListener("scroll", function () {
+  const btn = document.getElementById("topBtn");
+  btn.style.display = window.scrollY > 200 ? "block" : "none";
+});
+</script>
+
+<button id="topBtn"
+        onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
+        style="display:none; position:fixed; bottom:20px; right:20px; width:50px; height:50px; border-radius:75%; border:none; background:#2563eb; color:white; font-size:30px; cursor:pointer;">
+  ↑
+</button>
 
 </div>
 
