@@ -1,32 +1,4 @@
-
-do wykonania
-
-1. (dorota) wprowadzanie danych : kod smiles w polu tekstowym lub plik z danymi do obliczeń, usunięcie pozostałych pół formularza
-2. (Martyna) JSME Molecule Editor dla generowania kodu smiles, przykład
-   https://etoh.chem.ug.edu.pl/~czarek/projekt/smiles.html
-   pobrać https://jsme-editor.github.io/downloads/JSME_2024-04-29.zip i rozpakować w static
-   sprzwdzić jak to jest w programming_project_WCh_2025
-4. (Tymek) konwersja smiles do struktury 3d cząsteczki - openbabel lub pubchempy, rdkit, albo w skrypcie
-   <pre>
-     /usr/bin/obabel -:'CC(=O)CC' --gen3d -oxyz -Ostart.xyz
-   </pre>
-6. (Olek)uruchomienie z python dowolnego skryptu przez subprocess
-7. (Maciej) skrypt do obliczeń obliczeń xtb dla zadanego pliku lub wygenerowanego ze smiles 
-   <pre>
-     /big/appl/xtb-dist/bin/xtb start.xyz --opt --gfn2
-   </pre>
-8. (Martyna) singnals.py z https://github.com/ugbioinformatics/programming_project_WCh_2025/blob/main/mopac_portal/blog/signals.py
-   dla kasowanie plików wraz z kasowanie wpisu do bazy danych
-9. (DOROTa) http://127.0.0.1:8000/xtb/ przenieść do strony głownej
-10. (Olek)opacje konwersji obabel albo rdkit na stronie głownej
-11. wpisy wybranych (energia) wynikow do bazy danych razem z ich wyświetlaniem
-12. naprawić obliczenia startujące z pliku xyz
-13. dodać logowanie na podstawie przykładu https://etoh.chem.univ.gda.pl/~czarek/projekt/logowanie.html
-14. na podstawie nazwy związku chemicznego dodać wyszukowanie widma IR w https://webbook.nist.gov/chemistry/ lub innej bazie danych
-   
-
-   
-pierwsze uruchomienie
+ pierwsze uruchomienie
 <pre>
 git clone git@github.com:ugbioinformatics/programming_project_WCh_2026.git
 cd programming_project_WCh_2026
