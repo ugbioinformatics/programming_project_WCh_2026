@@ -21,20 +21,16 @@ from rdkit.Chem import Lipinski
 from .models import Post, XTBCalculation
 from .forms import Suma, XTBInputForm
 
-
-def runProcess(command, cwd=None, timeout=120):
-    try:
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            cwd=cwd,
-            timeout=timeout
-        )
-        return result.returncode == 0, result.stdout, result.stderr
-    except subprocess.TimeoutExpired:
-        return False, "", f"timeout expired: {timeout}"
-
+def register(request):
+    if request.method == 'POST':
+        form = PolishUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('home')
+    else:
+        form = PolishUserCreationForm()
+    return render(request, 'registration/signup.html', {'form': form})
 
 def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
     mol = Chem.MolFromSmiles(smiles)
