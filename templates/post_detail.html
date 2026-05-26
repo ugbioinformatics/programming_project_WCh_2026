@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", function () {
 </div>
 
 <h3>Widmo wibracyjne (IR)</h3>
-<div class="chart-container" style="position: relative; width: 800px; height: 300px;">
+<div class="chart-container" style="position: relative; width: 1300px; height: 300px;">
   <canvas id="irSpectrum"></canvas>
 </div>
 
@@ -348,7 +348,7 @@ document.addEventListener("DOMContentLoaded", function () {
 {% if nist_ir %}
 <hr>
 <h3>Widmo IR z bazy NIST</h3>
-<div class="chart-container" style="position: relative; width: 800px; height: 300px;">
+<div class="chart-container" style="position: relative; width: 1300px; height: 300px;">
   <canvas id="nistSpectrum"></canvas>
 </div>
 {{ nist_ir|json_script:"nist-data" }}
