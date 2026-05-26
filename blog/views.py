@@ -441,6 +441,34 @@ margin-bottom:10px;">
 Powrot do posta
 </a>
 ''')
+                t.write('''
+                <button id="topBtn"
+onclick="window.scrollTo({top:0, behavior:'smooth'})"
+style="
+display:flex;
+align-items:center;
+justify-content:center;
+
+position:fixed;
+bottom:20px;
+right:20px;
+width:55px;
+height:55px;
+
+border:none;
+border-radius:50%;
+background:#2563eb;
+
+cursor:pointer;
+box-shadow:0 4px 10px rgba(0,0,0,0.25);
+z-index:9999;
+transition:all 0.2s ease;
+">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="white" style="display:block;">
+  <path d="M12 4l-6 6h4v10h4V10h4z"/>
+</svg>
+</button>
+''')
                 
                 for i, line in enumerate(content):
 
@@ -471,7 +499,6 @@ Powrot do posta
     box-shadow:0 2px 6px rgba(0,0,0,0.15);
     transition:all 0.2s ease;
 ">
-
 <b>Wibracja {i+1}</b>
 
 </a>
@@ -503,6 +530,9 @@ Powrot do posta
 <script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
 
 <style>
+html {{
+    scroll-behavior: smooth;
+}}
 
 body {{
     font-family: Arial;
