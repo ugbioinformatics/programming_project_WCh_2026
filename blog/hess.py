@@ -278,6 +278,8 @@ def play_vib(xyz: list, mode: list, elem: list[str], amplitude: float = 0.4) -> 
 # Generowanie strony HTML z listą wibracji
 # ---------------------------------------------------------------------------
 
+import os
+
 def generate_links_vibspec(
     input_dir: str,
     vib_dir: str,
@@ -287,119 +289,253 @@ def generate_links_vibspec(
     elem: list[str],
 ) -> None:
     """
-    Generuje link_list.html oraz osobną stronę HTML dla każdego modu wibracyjnego.
-
-    Parametry
-    ---------
-    input_dir : ścieżka do pliku vibspectrum
-    vib_dir   : katalog wyjściowy na pliki HTML i mol2
-    freqs     : lista częstotliwości z parse_xtb
-    syms      : lista symetrii z parse_xtb
-    modes     : lista modów (wektory przesunięć) z parse_xtb
-    elem      : lista symboli pierwiastków z load_xtb_xyz
+    Generuje nowoczesny, responsywny interfejs HTML (dashboard) 
+    do przeglądania modów wibracyjnych.
     """
     with open(input_dir, 'r', encoding='utf-8') as f:
         content = f.read().splitlines()[9:]
 
+    # Odfiltrowanie linii końcowych, aby znać dokładną liczbę modów
+    valid_lines = [line for line in content if line != '$end']
+    num_modes = len(valid_lines)
+
+    # --- 1. GENEROWANIE LINK_LIST.HTML (Główny Panel) ---
+    dropdown_options = ""
+    cards_html = ""
+    
+    for i in range(num_modes):
+        freq = freqs[i] if i < len(freqs) else 0.0
+        sym = syms[i] if i < len(syms) else '?'
+        imag = 'TAK' if freq < 0 else 'NIE'
+        badge_color = "#ef4444" if freq < 0 else "#10b981"
+        
+        dropdown_options += f'<option value="{i}.html">Wibracja {i + 1} ({freq:.2f} cm⁻¹)</option>\n'
+        
+        cards_html += f'''
+        <a href="{i}.html" class="card">
+            <div class="card-title">Wibracja {i + 1}</div>
+            <div class="card-metric">Częstość: <b>{freq:.2f} cm⁻¹</b></div>
+            <div class="card-footer">
+                <span class="badge" style="background: {badge_color}">Urojona: {imag}</span>
+                <span class="sym-badge">{sym}</span>
+            </div>
+        </a>
+        '''
+
+    link_list_content = f'''<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spektroskopia Wibracyjna - Panel</title>
+    <style>
+        body {{ font-family: 'Segoe UI', system-ui, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 40px 20px; }}
+        .container {{ max-width: 1100px; margin: 0 auto; }}
+        h1 {{ text-align: center; color: #0f172a; margin-bottom: 8px; font-size: 32px; }}
+        .subtitle {{ text-align: center; color: #64748b; margin-bottom: 30px; font-size: 16px; }}
+        
+        .selector-box {{ background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); margin-bottom: 30px; display: flex; flex-direction: column; gap: 10px; align-items: center; border: 1px solid #e2e8f0; }}
+        label {{ font-weight: 600; color: #475569; }}
+        select {{ padding: 10px 16px; font-size: 16px; border-radius: 8px; border: 1px solid #cbd5e1; width: 100%; max-width: 400px; background-color: #fff; cursor: pointer; outline: none; transition: border-color 0.2s; }}
+        select:focus {{ border-color: #3b82f6; }}
+        
+        .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }}
+        .card {{ background: white; border-radius: 12px; padding: 20px; text-decoration: none; color: inherit; box-shadow: 0 2px 4px rgb(0 0 0 / 0.02); border: 1px solid #e2e8f0; transition: transform 0.2s, box-shadow: 0.2s, border-color 0.2s; display: flex; flex-direction: column; justify-content: space-between; }}
+        .card:hover {{ transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); border-color: #3b82f6; }}
+        .card-title {{ font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }}
+        .card-metric {{ font-size: 14px; color: #475569; margin-bottom: 16px; }}
+        .card-footer {{ display: flex; justify-content: space-between; align-items: center; }}
+        .badge {{ padding: 4px 10px; border-radius: 20px; color: white; font-size: 11px; font-weight: 600; text-transform: uppercase; }}
+        .sym-badge {{ background: #f1f5f9; padding: 4px 10px; border-radius: 6px; color: #475569; font-size: 12px; font-weight: 600; border: 1px solid #e2e8f0; }}
+        
+        .btn-back {{ display: block; max-width: 200px; margin: 40px auto 0; text-align: center; background: #475569; color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 500; transition: background 0.2s; }}
+        .btn-back:hover {{ background: #334155; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Widmo Wibracyjne</h1>
+        <p class="subtitle">Wybierz interesujący Cię mod z listy rozwijanej lub kliknij kartę poniżej.</p>
+        
+        <div class="selector-box">
+            <label for="vib-select">Szybki skok do modu:</label>
+            <select id="vib-select" onchange="if(this.value) window.location.href=this.value;">
+                <option value="">-- Wybierz numer wibracji --</option>
+                {dropdown_options}
+            </select>
+        </div>
+
+        <div class="grid">
+            {cards_html}
+        </div>
+        
+        <a href="javascript:history.back()" class="btn-back">⬅ Powrót do posta</a>
+    </div>
+</body>
+</html>
+'''
     with open(os.path.join(vib_dir, 'link_list.html'), 'w', encoding='utf-8') as t:
-        t.write('<pre>')
-        t.write('''
-<a href="javascript:history.back()"
-style="display:block;width:100%;text-align:center;background:#ef4444;
-color:white;text-decoration:none;border-radius:8px;padding:16px 0;
-font-size:18px;font-weight:400;margin-bottom:10px;">
-Powrot do posta
-</a>
-''')
-        for i, line in enumerate(content):
-            if line == '$end':
-                continue
+        t.write(link_list_content)
 
-            freq = freqs[i] if i < len(freqs) else 0.0
-            sym = syms[i] if i < len(syms) else '?'
-            imag = 'TAK' if freq < 0 else 'NIE'
 
-            t.write(f'''
-<a href="{i}.html"
-   style="display:block;width:100%;box-sizing:border-box;text-align:center;
-   background:#3b82f6;color:white;text-decoration:none;padding:12px 16px;
-   font-size:16px;font-weight:500;margin-bottom:6px;border-radius:8px;
-   line-height:1.2;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
-<b>Wibracja {i + 1}</b>
-</a>
-''')
+    # --- 2. GENEROWANIE POSZCZEGÓLNYCH STRON MODÓW ({i}.html) ---
+    for i in range(num_modes):
+        freq = freqs[i] if i < len(freqs) else 0.0
+        sym = syms[i] if i < len(syms) else '?'
+        imag = 'TAK' if freq < 0 else 'NIE'
+        
+        # Wygenerowanie dynamicznego dropdownu dla paska nawigacji wewnątrz strony modu
+        page_dropdown_options = ""
+        for j in range(num_modes):
+            selected = "selected" if j == i else ""
+            f_val = freqs[j] if j < len(freqs) else 0.0
+            page_dropdown_options += f'<option value="{j}.html" {selected}>Wibracja {j + 1} ({f_val:.2f} cm⁻¹)</option>\n'
 
-            mode = modes[i]
-            table_rows = ''
-            for atom_id, atom in enumerate(mode):
-                dx, dy, dz = atom
-                table_rows += f'''
-<tr>
-  <td>{atom_id + 1}</td>
-  <td>{elem[atom_id]}</td>
-  <td>{dx:.4f}</td>
-  <td>{dy:.4f}</td>
-  <td>{dz:.4f}</td>
-</tr>
-'''
+        mode = modes[i]
+        table_rows = ''
+        for atom_id, atom in enumerate(mode):
+            dx, dy, dz = atom
+            table_rows += f'''
+            <tr>
+                <td><b>{atom_id + 1}</b></td>
+                <td><span class="elem-badge">{elem[atom_id]}</span></td>
+                <td class="coord">{dx:.4f}</td>
+                <td class="coord">{dy:.4f}</td>
+                <td class="coord">{dz:.4f}</td>
+            </tr>
+            '''
 
-            page = f'''
-<script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
-<style>
-body {{ font-family: Arial; margin: 20px; }}
-.info {{ background: #f3f4f6; padding: 15px; border-radius: 10px; margin-bottom: 15px; }}
-table {{ border-collapse: collapse; width: 100%; margin-top: 15px; }}
-th, td {{ border: 1px solid #ccc; padding: 8px; text-align: center; }}
-th {{ background: #e5e7eb; }}
-</style>
+        page = f'''<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wibracja {i + 1}</title>
+    <script src="https://unpkg.com/ngl@1.0.0-beta.7"></script>
+    <style>
+        body {{ font-family: 'Segoe UI', system-ui, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }}
+        
+        .navbar {{ max-width: 1400px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center; background: white; padding: 14px 24px; border-radius: 12px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.05); border: 1px solid #e2e8f0; gap: 15px; flex-wrap: wrap; }}
+        .btn-nav {{ background: #ef4444; color: white; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: 500; transition: background 0.2s; font-size: 14px; }}
+        .btn-nav:hover {{ background: #dc2626; }}
+        
+        .nav-controls {{ display: flex; align-items: center; gap: 12px; }}
+        .nav-controls label {{ font-weight: 600; color: #475569; font-size: 14px; }}
+        select {{ padding: 8px 16px; font-size: 14px; border-radius: 8px; border: 1px solid #cbd5e1; background-color: #fff; cursor: pointer; outline: none; }}
+        select:focus {{ border-color: #3b82f6; }}
 
-<a href="javascript:history.back()"
-style="display:block;width:100%;text-align:center;background:#ef4444;
-color:white;text-decoration:none;border-radius:8px;padding:16px 0;
-font-size:18px;font-weight:400;margin-bottom:10px;">
-Powrot do listy wibracji
-</a>
+        .dashboard {{ max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 20px; }}
+        @media (min-width: 1024px) {{
+            .dashboard {{ grid-template-columns: 1fr 1.3fr; }}
+        }}
 
-<div class="info">
-  <h2>Wibracja {i + 1}</h2>
-  <p><b>Czestotliwosc:</b> {freq:.2f} cm^-1</p>
-  <p><b>Symetria:</b> {sym}</p>
-  <p><b>Urojona:</b> {imag}</p>
-</div>
+        .panel {{ background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); border: 1px solid #e2e8f0; box-sizing: border-box; }}
+        .viewport-panel {{ display: flex; flex-direction: column; background: #111827; overflow: hidden; padding: 0; min-height: 550px; border-color: #1f2937; position: sticky; top: 20px; }}
+        #viewport {{ width: 100%; height: 100%; min-height: 550px; }}
+        
+        h2 {{ margin-top: 0; color: #0f172a; font-size: 22px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 20px; }}
+        h3 {{ color: #1e293b; margin-top: 25px; font-size: 16px; font-weight: 600; }}
+        
+        .info-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 20px; }}
+        .info-card {{ background: #f1f5f9; padding: 14px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; }}
+        .info-label {{ font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px; }}
+        .info-value {{ font-size: 18px; font-weight: 700; color: #0f172a; }}
+        
+        .table-container {{ overflow-x: auto; max-height: 380px; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 10px; }}
+        table {{ border-collapse: collapse; width: 100%; text-align: center; }}
+        th, td {{ padding: 10px 12px; font-size: 14px; }}
+        th {{ background: #f8fafc; color: #475569; font-weight: 600; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 10; }}
+        tr:nth-child(even) {{ background: #f8fafc; }}
+        tr:hover {{ background: #f1f5f9; }}
+        td {{ border-bottom: 1px solid #e2e8f0; }}
+        
+        .elem-badge {{ background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 6px; font-weight: 700; font-size: 13px; }}
+        .coord {{ font-family: 'Courier New', Courier, monospace; color: #334155; font-weight: 600; }}
+    </style>
+</head>
+<body>
 
-<div id="viewport" style="width:700px; height:700px;"></div>
+    <div class="navbar">
+        <a href="link_list.html" class="btn-nav">⬅ Lista modów</a>
+        <div class="nav-controls">
+            <label for="mode-switcher">Wybierz mod:</label>
+            <select id="mode-switcher" onchange="window.location.href=this.value;">
+                {page_dropdown_options}
+            </select>
+        </div>
+    </div>
 
-<h3>Przemieszczenia atomowe</h3>
-<table>
-  <tr><th>Atom</th><th>Pierwiastek</th><th>dx</th><th>dy</th><th>dz</th></tr>
-  {table_rows}
-</table>
+    <div class="dashboard">
+        <div class="panel">
+            <h2>Modyfikacja Wibracyjna {i + 1}</h2>
+            
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-label">Częstotliwość</div>
+                    <div class="info-value" style="color: #2563eb;">{freq:.2f} cm⁻¹</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Symetria</div>
+                    <div class="info-value">{sym}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Urojona</div>
+                    <div class="info-value" style="color: {'#ef4444' if freq < 0 else '#10b981'};">{imag}</div>
+                </div>
+            </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {{
-    var stage = new NGL.Stage("viewport");
-    stage.loadFile("vib_{i}.mol2", {{
-        defaultRepresentation: true,
-        asTrajectory: true
-    }}).then(function(o) {{
-        var traj = o.trajList[0].trajectory;
-        var player = new NGL.TrajectoryPlayer(traj, {{
-            timeout: 80, start: 0, end: traj.numframes,
-            interpolateType: "", mode: "loop"
+            <h3>Przemieszczenia atomowe (Wektory)</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Atom</th>
+                            <th>Pierwiastek</th>
+                            <th>dx</th>
+                            <th>dy</th>
+                            <th>dz</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {table_rows}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel viewport-panel">
+            <div id="viewport"></div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {{
+        var stage = new NGL.Stage("viewport", {{ backgroundColor: "#111827" }});
+        stage.loadFile("vib_{i}.mol2", {{
+            defaultRepresentation: true,
+            asTrajectory: true
+        }}).then(function(o) {{
+            var traj = o.trajList[0].trajectory;
+            var player = new NGL.TrajectoryPlayer(traj, {{
+                timeout: 80, start: 0, end: traj.numframes,
+                interpolateType: "", mode: "loop"
+            }});
+            traj.setPlayer(player);
+            traj.player.play();
+            stage.centerView();
+            
+            // Obsługa automatycznego dopasowania rozmiaru przy zmianie okna
+            window.addEventListener("resize", function() {{
+                stage.handleResize();
+            }});
         }});
-        traj.setPlayer(player);
-        traj.player.play();
-        stage.centerView();
     }});
-}});
-</script>
+    </script>
+</body>
+</html>
 '''
-            with open(os.path.join(vib_dir, f'{i}.html'), 'w', encoding='utf-8') as d:
-                d.write(page)
-
-        t.write('</pre>')
-
-
+        with open(os.path.join(vib_dir, f'{i}.html'), 'w', encoding='utf-8') as d:
+            d.write(page)
 # ---------------------------------------------------------------------------
 # Główna funkcja: run_hess
 # ---------------------------------------------------------------------------
