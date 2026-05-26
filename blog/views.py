@@ -21,16 +21,20 @@ from rdkit.Chem import Lipinski
 from .models import Post, XTBCalculation
 from .forms import Suma, XTBInputForm
 
-def register(request):
-    if request.method == 'POST':
-        form = PolishUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('home')
-    else:
-        form = PolishUserCreationForm()
-    return render(request, 'registration/signup.html', {'form': form})
+
+def runProcess(command, cwd=None, timeout=120):
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+            timeout=timeout
+        )
+        return result.returncode == 0, result.stdout, result.stderr
+    except subprocess.TimeoutExpired:
+        return False, "", f"timeout expired: {timeout}"
+
 
 def smiles_to_xyz_rdkit(smiles: str, tmpdir: str) -> str:
     mol = Chem.MolFromSmiles(smiles)
@@ -419,7 +423,7 @@ def run_hess(tmpdir):
 
             with open(f'{vib_dir}/link_list.html', 'w', encoding='utf-8') as t:
 
-                
+                t.write("<pre>")
 
                 t.write('''
 <a href="javascript:history.back()"
@@ -465,15 +469,6 @@ transition:all 0.2s ease;
 </svg>
 </button>
 ''')
-                t.write("""
-<div class="grid" style="
-    display:grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap:10px;
-    max-width:1300px;
-    margin:auto;
-">
-""")
                 
                 for i, line in enumerate(content):
 
@@ -492,7 +487,7 @@ transition:all 0.2s ease;
     width:100%;
     box-sizing:border-box;
     text-align:center;
-    background:#e5e7eb;
+    background:#e5e7eb;;
     color:black;
     text-decoration:none;
     padding:12px 16px;
@@ -508,7 +503,6 @@ transition:all 0.2s ease;
 
 </a>
 ''')
-                    
                     
 
                     mode = modes[i]
@@ -654,7 +648,7 @@ document.addEventListener("DOMContentLoaded", function () {{
                         if "placeholder" in text:
                             text = text.replace("placeholder", f"vib_{i}.mol2")
                         d.write(text)
-        t.write("</div>")
+                t.write("</pre>")
 
     freqs, modes, syms = parse_xtb(g98_path)
     xyz, elem = load_xtb_xyz(g98_path)
