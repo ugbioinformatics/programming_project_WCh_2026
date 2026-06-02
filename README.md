@@ -6,7 +6,7 @@ Webowa aplikacja do obliczeń chemii kwantowej oparta na Django. Umożliwia:
 - optymalizację geometrii metodą GFN2-xTB
 - obliczenia Hessiana (częstotliwości drgań, widmo IR)
 - wizualizację struktur 2D i 3D bezpośrednio w przeglądarce
-- historię obliczeń per użytkownik
+- historię obliczeń
 
 ---
 
