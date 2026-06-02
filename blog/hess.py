@@ -369,7 +369,7 @@ def generate_links_vibspec(
             {cards_html}
         </div>
         
-        <a href="javascript:history.back()" class="btn-back">⬅ Powrót do posta</a>
+        <a href="/" class="btn-back">⬅ Powrót do strony głównej</a>
     </div>
     <button id="topBtn"
 onclick="window.scrollTo({{top:0, behavior:'smooth'}})"
