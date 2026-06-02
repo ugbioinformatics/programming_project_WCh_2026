@@ -27,7 +27,6 @@ Silnik obliczeń semiempirycznych GFN2-xTB (Grimme Group).
 |--------|---------|
 | Linux (conda) | `conda install -c conda-forge xtb` |
 | macOS (conda) | `conda install -c conda-forge xtb` |
-| Ręcznie | Pobierz binarki z [releases](https://github.com/grimme-lab/xtb/releases) i dodaj do `PATH` |
 
 Sprawdzenie instalacji:
 ```bash
