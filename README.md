@@ -88,12 +88,12 @@ pip install django==5.2.* rdkit requests numpy
 
 ## Uruchomienie krok po kroku
 
-### Krok 1 — Sklonuj repozytorium i przejdź na branch `test`
+### Krok 1 — Sklonuj repozytorium
 
 ```bash
 git clone https://github.com/ugbioinformatics/programming_project_WCh_2026.git
 cd programming_project_WCh_2026
-git checkout test
+git checkout
 ```
 
 ### Krok 2 — Utwórz i aktywuj środowisko wirtualne
@@ -117,10 +117,7 @@ python manage.py makemigrations blog
 python manage.py migrate
 ```
 
-
-Podaj nazwę użytkownika, email i hasło. Panel admina dostępny pod `/admin/`.
-
-### Krok 5 — Uruchom serwer deweloperski
+### Krok 5 — Uruchom serwer
 
 ```bash
 python manage.py runserver
