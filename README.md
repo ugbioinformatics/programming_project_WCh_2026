@@ -1,4 +1,4 @@
-# Programming Project WCh 2026
+# Programming Project WCh 2026 "Chemitron"
 
 Webowa aplikacja do obliczeń chemii kwantowej oparta na Django. Umożliwia:
 
