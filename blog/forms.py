@@ -31,7 +31,7 @@ class PolishUserCreationForm(UserCreationForm):
 
 
 # Obsługiwane rozszerzenia plików wejściowych (poza .xyz)
-ALLOWED_EXTENSIONS = ['.xyz', '.mol', '.mol2', '.sdf', '.pdb', '.cif', '.gjf', '.com']
+ALLOWED_EXTENSIONS = ['.xyz', '.mol', '.mol2', '.sdf', '.pdb']
 
 ALLOWED_EXTENSIONS_DISPLAY = ', '.join(ALLOWED_EXTENSIONS)
 
