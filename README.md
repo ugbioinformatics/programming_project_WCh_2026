@@ -7,7 +7,6 @@ Webowa aplikacja do obliczeń chemii kwantowej oparta na Django. Umożliwia:
 - obliczenia Hessiana (częstotliwości drgań, widmo IR)
 - wizualizację struktur 2D i 3D bezpośrednio w przeglądarce
 - historię obliczeń per użytkownik
-- pobieranie nazwy związku z PubChem
 
 ---
 
@@ -17,7 +16,7 @@ Webowa aplikacja do obliczeń chemii kwantowej oparta na Django. Umożliwia:
 
 | System | Komenda |
 |--------|---------|
-| Ubuntu/Debian | `sudo apt install python3 python3-pip python3-venv` |
+| Linux | `sudo apt install python3 python3-pip python3-venv` |
 | macOS (Homebrew) | `brew install python` |
 
 ### 2. xTB
@@ -77,9 +76,6 @@ pip install django==5.2.* rdkit requests numpy
 | RDKit | https://www.rdkit.org/docs/ |
 | xTB | https://xtb-docs.readthedocs.io/en/latest/ |
 | OpenBabel | https://openbabel.org/docs/dev/index.html |
-| NumPy | https://numpy.org/doc/stable/ |
-| Requests | https://requests.readthedocs.io/en/latest/ |
-| PubChem REST API | https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest |
 | 3Dmol.js (wizualizacja 3D) | https://3dmol.csb.pitt.edu/ |
 | NGL Viewer (wizualizacja po opt.) | https://nglviewer.org/ngl/api/ |
 | Chart.js (widma IR) | https://www.chartjs.org/docs/latest/ |
