@@ -335,6 +335,7 @@ class BlogDetailView(DetailView):
         post = self.object
         tmpdir = os.path.join(settings.MEDIA_ROOT, str(post.id))
         context['vibspectrum'] = read_vibspectrum(tmpdir)
+        context['molecule_name'] = post.title
 
         if post.smiles:
             context['nist_ir'] = get_nist_ir_data(post.smiles)
