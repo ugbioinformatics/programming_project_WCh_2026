@@ -78,7 +78,8 @@ pip install django==5.2.* rdkit requests numpy
 | 3Dmol.js (wizualizacja 3D) | https://3dmol.csb.pitt.edu/ |
 | NGL Viewer (wizualizacja po opt.) | https://nglviewer.org/ngl/api/ |
 | Chart.js (widma IR) | https://www.chartjs.org/docs/latest/ |
-
+| JSME | https://jsme-editor.github.io/ |
+| PyVibMS | https://github.com/smutao/PyVibMS |
 ---
 
 ## Uruchomienie krok po kroku
