@@ -2,7 +2,7 @@
 
 Webowa aplikacja do obliczeń chemii kwantowej oparta na Django. Umożliwia:
 
-- wprowadzanie cząsteczek przez SMILES lub plik molekularny (`.xyz`, `.mol`, `.mol2`, `.sdf`, `.pdb`, `.cif`, `.gjf`)
+- wprowadzanie cząsteczek przez SMILES lub plik molekularny (`.xyz`, `.mol`, `.mol2`, `.sdf`, `.pdb`)
 - optymalizację geometrii metodą GFN2-xTB
 - obliczenia Hessiana (częstotliwości drgań, widmo IR)
 - wizualizację struktur 2D i 3D bezpośrednio w przeglądarce
