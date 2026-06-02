@@ -25,6 +25,13 @@ from .hess import run_hess, read_vibspectrum
 
 logger = logging.getLogger(__name__)
 
+def smilesValidation(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return False, "Błędny SMILES"
+    else:
+        return True, mol
+
 
 # ---------------------------------------------------------------------------
 # Wykrywanie ścieżek do binarek — MUSI być przed funkcjami, które ich używają
@@ -456,6 +463,10 @@ def suma(request):
             return render(request, 'bad_input.html', {'form': form})
 
         smiles = form.cleaned_data['smiles']
+        if smiles:
+            validFLAG, mol = smilesValidation(smiles)
+            if not validFLAG:
+                return render(request, 'bad_input.html', {'form': form, 'error': mol})
         plik1 = form.cleaned_data['plik']
         do_hess = form.cleaned_data.get('do_hess') is True
 
